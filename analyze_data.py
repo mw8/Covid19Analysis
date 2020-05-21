@@ -60,6 +60,7 @@ def sigmoid_jac(a, t, w):
     jac[:, 4] = a[0] * -dp * np.log(d)
     return jac
 
+
 def sigmoid_jac_test():
     n = 100
     t = np.linspace(0., 1., n)
@@ -77,7 +78,7 @@ def sigmoid_jac_test():
         a1[i] += eps
         res1 = w * (sigmoid(a1, t) - y0) / np.sqrt(n)
         jac1[:, i] = (res1 - res0) / eps
-    print((jac0-jac1).max(0))
+    print((jac0 - jac1).max(0))
 
 
 # fit a sigmoid using the Gauss-Newton method to optimize weighted least squares
@@ -186,11 +187,11 @@ def plot_county_cd(ax, ccd, county, state, date, pop):
     ax.set_title('{} County, {} - {}'.format(county, state, date), {'fontsize': 10})
 
     # plot cases asymptote
-    ax.plot([t1[0],t1[-1]], [c1_max,c1_max], lw=0.5, color='tab:gray')
+    ax.plot([t1[0], t1[-1]], [c1_max, c1_max], lw=0.5, color='tab:gray')
 
     # plot deaths asymptote
     ax2 = ax.twinx()
-    ax2.plot([t1[0],t1[-1]], [d1_max,d1_max], lw=0.5, color='xkcd:baby pink')
+    ax2.plot([t1[0], t1[-1]], [d1_max, d1_max], lw=0.5, color='xkcd:baby pink')
 
     # plot cases
     ax.plot(t1, c1, color='tab:gray')
@@ -205,7 +206,8 @@ def plot_county_cd(ax, ccd, county, state, date, pop):
     ax2.plot(t0, d0, color='tab:red')
     ax2.set_ylabel('Deaths (per 100k)', color='tab:red')
     ax2.tick_params(axis='y', labelcolor='tab:red')
-    ax2.set_ylim(0, 2 * np.max(d0))
+    ax2.set_ylim(0, max(2 * np.max(d0), 20))
+
 
 # plot new cases versus total cases over time
 def plot_county_nc(ax, ccd, county, state, date, pop):
@@ -240,6 +242,7 @@ def plot_county_nc(ax, ccd, county, state, date, pop):
     ax.set_ylabel('Cases Per Day (smoothed)')
     ax.set_xlabel('Total Cases')
 
+
 # plot cases/deaths over time and new cases versus total cases
 def plot_county_list(county_list):
     n = len(county_list)
@@ -252,11 +255,10 @@ def plot_county_list(county_list):
         county, state = county_list[i]
         ccd = load_county_cd(csv_data, county, state)
         pop = load_county_pop(county, state)
-        plot_county_cd(axs[0,i], ccd, county, state, date, pop)
-        plot_county_nc(axs[1,i], ccd, county, state, date, pop)
+        plot_county_cd(axs[0, i], ccd, county, state, date, pop)
+        plot_county_nc(axs[1, i], ccd, county, state, date, pop)
 
 
 if __name__ == "__main__":
-    sigmoid_jac_test()
-    plot_county_list([('Santa Clara', 'California'), ('San Francisco', 'California'), ('Los Angeles', 'California'), ('Broward', 'Florida')])
+    plot_county_list([('Los Angeles', 'California'), ('San Diego', 'California'), ('Orange', 'California')])
     plt.show()

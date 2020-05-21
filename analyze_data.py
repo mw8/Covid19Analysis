@@ -5,18 +5,13 @@ import matplotlib.pyplot as plt
 
 # load population data for a county
 def load_county_pop(county, state):
-    import csv
-    with open('county_pop.csv', newline='') as csvfile:
-        csv_reader = csv.reader(csvfile, delimiter=',')
-        for row in csv_reader:
-            if row[0] == county + " County":
-                return float(row[2])
-    raise Exception('{} County, {} not found in population csv data'.format(county, state))
+    c = pd.read_csv('county_pop.csv')
+    return c[(c['County'] == county) & (c['State'] == state)].iloc[0]['Population']
 
 
 # load case and death data for a county
 def load_county_cd(csv_data, county, state):
-    r = csv_data[np.logical_and(csv_data['county'] == county, csv_data['state'] == state)]
+    r = csv_data[(csv_data['county'] == county) & (csv_data['state'] == state)]
     return np.array(r[['cases', 'deaths']])
 
 
@@ -258,7 +253,7 @@ def plot_county_list(county_list):
         plot_county_cd(axs[0, i], ccd, county, state, date, pop)
         plot_county_nc(axs[1, i], ccd, county, state, date, pop)
 
-
 if __name__ == "__main__":
     plot_county_list([('Los Angeles', 'California'), ('San Diego', 'California'), ('Orange', 'California')])
     plt.show()
+

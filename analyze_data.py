@@ -4,13 +4,32 @@ import matplotlib.pyplot as plt
 
 
 # load population data for a county
-def load_county_pop(county, state):
+def load_pop_county(county, state):
     c = pd.read_csv('county_pop.csv')
-    return c[(c['County'] == county) & (c['State'] == state)].iloc[0]['Population']
+    return c[(c['county'] == county) & (c['state'] == state)].iloc[0]['population']
+
+
+# load population data for a state
+def load_pop_state(state):
+    c = pd.read_csv('state_pop.csv')
+    return c[c['state'] == state].iloc[0]['population']
+
+
+# load case and death data for all states
+def load_cd_states():
+    c = pd.read_csv('covid-19-data/us-states.csv')
+    date = c['date'][len(c) - 1]
+    states = c.state.unique()
+    n_states = len(states)
+    cd = []
+    for i in range(n_states):
+        r = c[c['state']==states[i]]
+        cd.append(np.array(r[['cases', 'deaths']]))
+    return states, cd, date
 
 
 # load case and death data for a county
-def load_county_cd(csv_data, county, state):
+def load_cd_county(csv_data, county, state):
     r = csv_data[(csv_data['county'] == county) & (csv_data['state'] == state)]
     return np.array(r[['cases', 'deaths']])
 
@@ -149,34 +168,44 @@ def fit_sigmoid_wls_gn(x_init, t, w, y0_raw, iter_max, debug=False):
 
 
 # fit sigmoid function (generalized logistic) using iteratively reweighted least squares
-def fit_sigmoid(y0, n_extrap):
+def fit_sigmoid(y0, n_ext):
     n = len(y0)
     t0 = np.linspace(0., 1., n)
     w0 = np.ones(n)
     a0 = np.array([1.5, 1, 5, 0.75, 1])
     a1 = fit_sigmoid_wls_gn(a0, t0, w0, y0, 200)
-    t1 = np.concatenate((t0, 1. + (t0[1] - t0[0]) * (np.arange(n_extrap) + 1.)))
+    t1 = np.concatenate((t0, 1. + (t0[1] - t0[0]) * (np.arange(n_ext) + 1.)))
     y1 = sigmoid(a1, t1)
     y1_max = sigmoid(a1, 100.)
     return y1, y1_max
 
 
+# estimate the linear growth rate (derivative) of a time series by linear fit for every consecutive 7 days
+def est_growth_rate(y):
+    n = y.shape[0]
+    gr = np.zeros(n-6)
+    x = np.arange(7)
+    for i in range(n-6):
+        gr[i] = np.polyfit(x, y[i:i+7], 1)[0]
+    return gr
+
+
 # plot cases and deaths over time
-def plot_county_cd(ax, ccd, county, state, date, pop):
+def plot_cd_county(ax, cd, county, state, date, pop):
     # number of days to plot and extrapolate
-    n_days = ccd.shape[0]
-    n_days_extrap = 10
+    n_days = cd.shape[0]
+    n_days_ext = 10
     n_days_plot = 40
 
     # normalize by population (cases/deaths per 100,000)
-    c0 = ccd[:, 0] / pop * 100e3
-    d0 = ccd[:, 1] / pop * 100e3
+    c0 = cd[:, 0] / pop * 1e5
+    d0 = cd[:, 1] / pop * 1e5
 
     # fit sigmoid to cases and deaths
     t0 = np.flip(np.arange(n_days) + 1.)
-    t1 = np.flip(np.arange(-n_days_extrap, n_days) + 1.)
-    c1, c1_max = fit_sigmoid(smooth_iir_1(c0), n_days_extrap)
-    d1, d1_max = fit_sigmoid(smooth_iir_1(d0), n_days_extrap)
+    t1 = np.flip(np.arange(-n_days_ext, n_days) + 1.)
+    c1, c1_max = fit_sigmoid(smooth_iir_1(c0), n_days_ext)
+    d1, d1_max = fit_sigmoid(smooth_iir_1(d0), n_days_ext)
 
     # title
     ax.set_title('{} County, {} - {}'.format(county, state, date), {'fontsize': 10})
@@ -193,7 +222,7 @@ def plot_county_cd(ax, ccd, county, state, date, pop):
     ax.plot(t0, c0, color='k')
     ax.set_ylabel('Cases (per 100k)')
     ax.set_xlabel('Days ago')
-    ax.set_xlim(n_days_plot, -n_days_extrap)
+    ax.set_xlim(n_days_plot, -n_days_ext)
     ax.set_ylim(0, 1.2 * np.max(c0))
 
     # plot deaths
@@ -205,17 +234,17 @@ def plot_county_cd(ax, ccd, county, state, date, pop):
 
 
 # plot new cases versus total cases over time
-def plot_county_nc(ax, ccd, county, state, date, pop):
+def plot_nc_county(ax, cd, county, state, date, pop):
     # number of days to plot and extrapolate
-    n_days = ccd.shape[0]
-    n_days_extrap = 10
-    c0 = ccd[:, 0]
+    n_days = cd.shape[0]
+    n_days_ext = 10
+    c0 = cd[:, 0]
     c0s = smooth_iir_1(c0)
 
     # fit sigmoid to cases
     t0 = np.flip(np.arange(n_days) + 1.)
-    t1 = np.flip(np.arange(-n_days_extrap, n_days) + 1.)
-    c1, c1_max = fit_sigmoid(c0s, n_days_extrap)
+    t1 = np.flip(np.arange(-n_days_ext, n_days) + 1.)
+    c1, c1_max = fit_sigmoid(c0s, n_days_ext)
 
     # get new cases per day
     dc0 = np.diff(c0s)
@@ -241,19 +270,52 @@ def plot_county_nc(ax, ccd, county, state, date, pop):
 # plot cases/deaths over time and new cases versus total cases
 def plot_county_list(county_list):
     n = len(county_list)
+    csv_data = pd.read_csv('covid-19-data/us-counties.csv')
+    date = csv_data['date'][len(csv_data) - 1]
     fig, axs = plt.subplots(2, n, figsize=(16, 6))
     plt.subplots_adjust(wspace=0.45, hspace=0.3)
-    csv_data = pd.read_csv('covid-19-data/us-counties.csv')
-    last_idx = len(csv_data) - 1
-    date = csv_data['date'][last_idx]
     for i in range(n):
         county, state = county_list[i]
-        ccd = load_county_cd(csv_data, county, state)
-        pop = load_county_pop(county, state)
-        plot_county_cd(axs[0, i], ccd, county, state, date, pop)
-        plot_county_nc(axs[1, i], ccd, county, state, date, pop)
+        cd = load_cd_county(csv_data, county, state)
+        pop = load_pop_county(county, state)
+        plot_cd_county(axs[0, i], cd, county, state, date, pop)
+        plot_nc_county(axs[1, i], cd, county, state, date, pop)
+
+
+# table of new deaths per day for the top 10 states
+def plot_nd_states():
+    states, cd_states, date_str = load_cd_states()
+    n_states = len(states)
+    # compute growth rates and their corresponding scores
+    gr = []
+    gr_score = np.zeros(n_states)
+    for i in range(n_states):
+        pop = load_pop_state(states[i])
+        gr.append(est_growth_rate(smooth_iir_1(cd_states[i][:,1])) / pop * 1e5)
+        gr_score[i] = np.mean(gr[i][-10:]) + np.max(gr[i])  + 10 * (pop > 2e5)
+    # sort based on recent growth rate
+    idx = np.argsort(gr_score)
+    gr = [gr[i] for i in idx]
+    # plot
+    n_top = 10
+    fig = plt.figure(figsize=(8, 5))
+    x = np.arange(60, 0, -1)
+    # uncomment to plot all states
+    # for i in range(n_states-n_top):
+    #     n = min(len(gr[i]), 60)
+    #     plt.plot(x[-n:], gr[i][-n:], color='tab:gray', lw=0.5)
+    for i in range(n_top-1,-1,-1):
+        n = min(len(gr[n_states-n_top+i]), 60)
+        plt.plot(x[-n:], gr[n_states-n_top+i][-n:], label=states[idx[n_states-n_top+i]], lw=2.0)
+    plt.xlabel('Days Ago')
+    plt.ylabel('New Deaths per 100k (Weekly Average)')
+    plt.xlim(60, 0)
+    plt.legend(loc='upper left', fontsize='small')
+    plt.title(date_str)
+
 
 if __name__ == "__main__":
-    plot_county_list([('Los Angeles', 'California'), ('San Diego', 'California'), ('Orange', 'California')])
+    plot_county_list([('Santa Clara', 'California'), ('Los Angeles', 'California'),  ('Broward', 'Florida')])
+    plot_nd_states()
     plt.show()
 

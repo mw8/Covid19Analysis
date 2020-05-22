@@ -12,4 +12,6 @@ Scripts to plot and analyze covid-19 case data by county.
 > python3 analyze_data.py
 
 ## Example output
-![Example plots of Los Angeles, San Diego, and Orange counties](figures/example_la_sd_oc.png)
+![Example plots of Los Angeles, San Diego, and Orange counties](figures/example_1.png)
+
+![Example plot of new deaths for the 10 worst states](figures/example_2.png)

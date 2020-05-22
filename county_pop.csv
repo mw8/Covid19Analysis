@@ -1,4 +1,4 @@
-County,State,Population
+county,state,population
 Autauga,Alabama,55869
 Baldwin,Alabama,223234
 Barbour,Alabama,24686
@@ -68,9 +68,9 @@ Wilcox,Alabama,10373
 Winston,Alabama,23629
 Aleutians East Borough,Alaska,3337
 Aleutians West Census Area,Alaska,5634
-Anchorage Municipality,Alaska,288000
+Anchorage,Alaska,288000
 Bethel Census Area,Alaska,18386
-Bristol Bay Borough,Alaska836
+Bristol Bay Borough,Alaska,836
 Denali Borough,Alaska,2097
 Dillingham Census Area,Alaska,4916
 Fairbanks North Star Borough,Alaska,96849
@@ -93,7 +93,7 @@ Skagway Municipality,Alaska,1183
 Southeast Fairbanks Census Area,Alaska,6893
 Valdez-Cordova Census Area,Alaska,9202
 Wrangell City and Borough,Alaska,2502
-Yakutat City and Borough,Alaska579
+Yakutat City and Borough,Alaska,579
 Yukon-Koyukuk Census Area,Alaska,5230
 Apache,Arizona,71887
 Cochise,Arizona,125922
@@ -270,7 +270,7 @@ Garfield,Colorado,60061
 Gilpin,Colorado,6243
 Grand,Colorado,15734
 Gunnison,Colorado,17462
-Hinsdale,Colorado820
+Hinsdale,Colorado,820
 Huerfano,Colorado,6897
 Jackson,Colorado,1392
 Jefferson,Colorado,582881
@@ -283,7 +283,7 @@ Las Animas,Colorado,14506
 Lincoln,Colorado,5701
 Logan,Colorado,22409
 Mesa,Colorado,154210
-Mineral,Colorado769
+Mineral,Colorado,769
 Moffat,Colorado,13283
 Montezuma,Colorado,26183
 Montrose,Colorado,42758
@@ -299,7 +299,7 @@ Rio Blanco,Colorado,6324
 Rio Grande,Colorado,11267
 Routt,Colorado,25638
 Saguache,Colorado,6824
-San Juan,Colorado728
+San Juan,Colorado,728
 San Miguel,Colorado,8179
 Sedgwick,Colorado,2248
 Summit,Colorado,31011
@@ -547,7 +547,7 @@ Wilkinson,Georgia,8954
 Worth,Georgia,20247
 Hawaii,Hawaii,201513
 Honolulu,Hawaii,974563
-Kalawao,Hawaii86
+Kalawao,Hawaii,86
 Kauai,Hawaii,72293
 Maui,Hawaii,167417
 Ada,Idaho,481587
@@ -566,7 +566,7 @@ Camas,Idaho,1106
 Canyon,Idaho,229849
 Caribou,Idaho,7155
 Cassia,Idaho,24030
-Clark,Idaho845
+Clark,Idaho,845
 Clearwater,Idaho,8756
 Custer,Idaho,4315
 Elmore,Idaho,27511
@@ -1112,70 +1112,70 @@ Webster,Kentucky,12942
 Whitley,Kentucky,36264
 Wolfe,Kentucky,7157
 Woodford,Kentucky,26734
-Acadia Parish,Louisiana,62045
-Allen Parish,Louisiana,25627
-Ascension Parish,Louisiana,126604
-Assumption Parish,Louisiana,21891
-Avoyelles Parish,Louisiana,40144
-Beauregard Parish,Louisiana,37497
-Bienville Parish,Louisiana,13241
-Bossier Parish,Louisiana,127039
-Caddo Parish,Louisiana,240204
-Calcasieu Parish,Louisiana,203436
-Caldwell Parish,Louisiana,9918
-Cameron Parish,Louisiana,6973
-Catahoula Parish,Louisiana,9494
-Claiborne Parish,Louisiana,15670
-Concordia Parish,Louisiana,19259
-De Soto Parish,Louisiana,27463
-East Baton Rouge Parish,Louisiana,440059
-East Carroll Parish,Louisiana,6861
-East Feliciana Parish,Louisiana,19135
-Evangeline Parish,Louisiana,33395
-Franklin Parish,Louisiana,20015
-Grant Parish,Louisiana,22389
-Iberia Parish,Louisiana,69830
-Iberville Parish,Louisiana,32511
-Jackson Parish,Louisiana,15744
-Jefferson Parish,Louisiana,432493
-Jefferson Davis Parish,Louisiana,31368
-Lafayette Parish,Louisiana,244390
-Lafourche Parish,Louisiana,97614
-LaSalle Parish,Louisiana,14892
-Lincoln Parish,Louisiana,46742
-Livingston Parish,Louisiana,140789
-Madison Parish,Louisiana,10951
-Morehouse Parish,Louisiana,24874
-Natchitoches Parish,Louisiana,38158
-Orleans Parish,Louisiana,390144
-Ouachita Parish,Louisiana,153279
-Plaquemines Parish,Louisiana,23197
-Pointe Coupee Parish,Louisiana,21730
-Rapides Parish,Louisiana,129648
-Red River Parish,Louisiana,8442
-Richland Parish,Louisiana,20122
-Sabine Parish,Louisiana,23884
-St. Bernard Parish,Louisiana,47244
-St. Charles Parish,Louisiana,53100
-St. Helena Parish,Louisiana,10132
-St. James Parish,Louisiana,21096
-St. John the Baptist Parish,Louisiana,42837
-St. Landry Parish,Louisiana,82124
-St. Martin Parish,Louisiana,53431
-St. Mary Parish,Louisiana,49348
-St. Tammany Parish,Louisiana,260419
-Tangipahoa Parish,Louisiana,134758
-Tensas Parish,Louisiana,4334
-Terrebonne Parish,Louisiana,110461
-Union Parish,Louisiana,22108
-Vermilion Parish,Louisiana,59511
-Vernon Parish,Louisiana,47429
-Washington Parish,Louisiana,46194
-Webster Parish,Louisiana,38340
-West Baton Rouge Parish,Louisiana,26465
-West Carroll Parish,Louisiana,10830
-West Feliciana Parish,Louisiana,15568
-Winn Parish,Louisiana,13904
+Acadia,Louisiana,62045
+Allen,Louisiana,25627
+Ascension,Louisiana,126604
+Assumption,Louisiana,21891
+Avoyelles,Louisiana,40144
+Beauregard,Louisiana,37497
+Bienville,Louisiana,13241
+Bossier,Louisiana,127039
+Caddo,Louisiana,240204
+Calcasieu,Louisiana,203436
+Caldwell,Louisiana,9918
+Cameron,Louisiana,6973
+Catahoula,Louisiana,9494
+Claiborne,Louisiana,15670
+Concordia,Louisiana,19259
+De Soto,Louisiana,27463
+East Baton Rouge,Louisiana,440059
+East Carroll,Louisiana,6861
+East Feliciana,Louisiana,19135
+Evangeline,Louisiana,33395
+Franklin,Louisiana,20015
+Grant,Louisiana,22389
+Iberia,Louisiana,69830
+Iberville,Louisiana,32511
+Jackson,Louisiana,15744
+Jefferson,Louisiana,432493
+Jefferson Davis,Louisiana,31368
+Lafayette,Louisiana,244390
+Lafourche,Louisiana,97614
+LaSalle,Louisiana,14892
+Lincoln,Louisiana,46742
+Livingston,Louisiana,140789
+Madison,Louisiana,10951
+Morehouse,Louisiana,24874
+Natchitoches,Louisiana,38158
+Orleans,Louisiana,390144
+Ouachita,Louisiana,153279
+Plaquemines,Louisiana,23197
+Pointe Coupee,Louisiana,21730
+Rapides,Louisiana,129648
+Red River,Louisiana,8442
+Richland,Louisiana,20122
+Sabine,Louisiana,23884
+St. Bernard,Louisiana,47244
+St. Charles,Louisiana,53100
+St. Helena,Louisiana,10132
+St. James,Louisiana,21096
+St. John the Baptist,Louisiana,42837
+St. Landry,Louisiana,82124
+St. Martin,Louisiana,53431
+St. Mary,Louisiana,49348
+St. Tammany,Louisiana,260419
+Tangipahoa,Louisiana,134758
+Tensas,Louisiana,4334
+Terrebonne,Louisiana,110461
+Union,Louisiana,22108
+Vermilion,Louisiana,59511
+Vernon,Louisiana,47429
+Washington,Louisiana,46194
+Webster,Louisiana,38340
+West Baton Rouge,Louisiana,26465
+West Carroll,Louisiana,10830
+West Feliciana,Louisiana,15568
+Winn,Louisiana,13904
 Androscoggin,Maine,108277
 Aroostook,Maine,67055
 Cumberland,Maine,295003
@@ -1615,7 +1615,7 @@ Flathead,Montana,103806
 Gallatin,Montana,114434
 Garfield,Montana,1258
 Glacier,Montana,13753
-Golden Valley,Montana821
+Golden Valley,Montana,821
 Granite,Montana,3379
 Hill,Montana,16484
 Jefferson,Montana,12221
@@ -1631,7 +1631,7 @@ Mineral,Montana,4397
 Missoula,Montana,119600
 Musselshell,Montana,4633
 Park,Montana,16606
-Petroleum,Montana487
+Petroleum,Montana,487
 Phillips,Montana,3954
 Pondera,Montana,5911
 Powder River,Montana,1682
@@ -1648,16 +1648,16 @@ Stillwater,Montana,9642
 Sweet Grass,Montana,3737
 Teton,Montana,6147
 Toole,Montana,4736
-Treasure,Montana696
+Treasure,Montana,696
 Valley,Montana,7396
 Wheatland,Montana,2126
-Wibaux,Montana969
+Wibaux,Montana,969
 Yellowstone,Montana,161300
 Adams,Nebraska,31363
 Antelope,Nebraska,6298
-Arthur,Nebraska463
-Banner,Nebraska745
-Blaine,Nebraska465
+Arthur,Nebraska,463
+Banner,Nebraska,745
+Blaine,Nebraska,465
 Boone,Nebraska,5192
 Box Butte,Nebraska,10783
 Boyd,Nebraska,1919
@@ -1690,28 +1690,28 @@ Gage,Nebraska,21513
 Garden,Nebraska,1837
 Garfield,Nebraska,1969
 Gosper,Nebraska,1990
-Grant,Nebraska623
+Grant,Nebraska,623
 Greeley,Nebraska,2356
 Hall,Nebraska,61353
 Hamilton,Nebraska,9324
 Harlan,Nebraska,3380
-Hayes,Nebraska922
+Hayes,Nebraska,922
 Hitchcock,Nebraska,2762
 Holt,Nebraska,10067
-Hooker,Nebraska682
+Hooker,Nebraska,682
 Howard,Nebraska,6445
 Jefferson,Nebraska,7046
 Johnson,Nebraska,5071
 Kearney,Nebraska,6495
 Keith,Nebraska,8034
-Keya Paha,Nebraska806
+Keya Paha,Nebraska,806
 Kimball,Nebraska,3632
 Knox,Nebraska,8332
 Lancaster,Nebraska,319090
 Lincoln,Nebraska,34914
-Logan,Nebraska748
-Loup,Nebraska664
-McPherson,Nebraska494
+Logan,Nebraska,748
+Loup,Nebraska,664
+McPherson,Nebraska,494
 Madison,Nebraska,35099
 Merrick,Nebraska,7755
 Morrill,Nebraska,4642
@@ -1738,19 +1738,19 @@ Sherman,Nebraska,3001
 Sioux,Nebraska,1166
 Stanton,Nebraska,5920
 Thayer,Nebraska,5003
-Thomas,Nebraska722
+Thomas,Nebraska,722
 Thurston,Nebraska,7224
 Valley,Nebraska,4158
 Washington,Nebraska,20729
 Wayne,Nebraska,9385
 Webster,Nebraska,3487
-Wheeler,Nebraska783
+Wheeler,Nebraska,783
 York,Nebraska,13679
 Churchill,Nevada,24909
 Clark,Nevada,2266715
 Douglas,Nevada,48905
 Elko,Nevada,52778
-Esmeralda,Nevada873
+Esmeralda,Nevada,873
 Eureka,Nevada,2029
 Humboldt,Nevada,16831
 Lander,Nevada,5532
@@ -1805,7 +1805,7 @@ Doña Ana,New Mexico,218195
 Eddy,New Mexico,58460
 Grant,New Mexico,26998
 Guadalupe,New Mexico,4300
-Harding,New Mexico625
+Harding,New Mexico,625
 Hidalgo,New Mexico,4198
 Lea,New Mexico,71070
 Lincoln,New Mexico,19572
@@ -1992,7 +1992,7 @@ Yancey,North Carolina,18069
 Adams,North Dakota,2216
 Barnes,North Dakota,10415
 Benson,North Dakota,6832
-Billings,North Dakota928
+Billings,North Dakota,928
 Bottineau,North Dakota,6282
 Bowman,North Dakota,3024
 Burke,North Dakota,2115
@@ -2032,7 +2032,7 @@ Rolette,North Dakota,14176
 Sargent,North Dakota,3898
 Sheridan,North Dakota,1315
 Sioux,North Dakota,4230
-Slope,North Dakota750
+Slope,North Dakota,750
 Stark,North Dakota,31489
 Steele,North Dakota,1890
 Stutsman,North Dakota,20704
@@ -2397,7 +2397,7 @@ Hutchinson,South Dakota,7291
 Hyde,South Dakota,1301
 Jackson,South Dakota,3344
 Jerauld,South Dakota,2013
-Jones,South Dakota903
+Jones,South Dakota,903
 Kingsbury,South Dakota,4939
 Lake,South Dakota,12797
 Lawrence,South Dakota,25844
@@ -2538,7 +2538,7 @@ Bee,Texas,32565
 Bell,Texas,362924
 Bexar,Texas,2003554
 Blanco,Texas,11931
-Borden,Texas654
+Borden,Texas,654
 Bosque,Texas,18685
 Bowie,Texas,93245
 Brazoria,Texas,374264
@@ -2652,11 +2652,11 @@ Jones,Texas,20083
 Karnes,Texas,15601
 Kaufman,Texas,136154
 Kendall,Texas,47431
-Kenedy,Texas404
-Kent,Texas762
+Kenedy,Texas,404
+Kent,Texas,762
 Kerr,Texas,52600
 Kimble,Texas,4337
-King,Texas272
+King,Texas,272
 Kinney,Texas,3667
 Kleberg,Texas,30680
 Knox,Texas,3664
@@ -2672,12 +2672,12 @@ Limestone,Texas,23437
 Lipscomb,Texas,3233
 Live Oak,Texas,12207
 Llano,Texas,21795
-Loving,Texas169
+Loving,Texas,169
 Lubbock,Texas,310569
 Lynn,Texas,5951
 McCulloch,Texas,7984
 McLennan,Texas,256623
-McMullen,Texas743
+McMullen,Texas,743
 Madison,Texas,14284
 Marion,Texas,9854
 Martin,Texas,5771
@@ -2718,7 +2718,7 @@ Real,Texas,3452
 Red River,Texas,12023
 Reeves,Texas,15976
 Refugio,Texas,6948
-Roberts,Texas854
+Roberts,Texas,854
 Robertson,Texas,17074
 Rockwall,Texas,104915
 Runnels,Texas,10264
@@ -2743,7 +2743,7 @@ Sutton,Texas,3776
 Swisher,Texas,7397
 Tarrant,Texas,2102515
 Taylor,Texas,138034
-Terrell,Texas776
+Terrell,Texas,776
 Terry,Texas,12337
 Throckmorton,Texas,1501
 Titus,Texas,32750
@@ -2780,7 +2780,7 @@ Beaver,Utah,6710
 Box Elder,Utah,56046
 Cache,Utah,128289
 Carbon,Utah,20463
-Daggett,Utah950
+Daggett,Utah,950
 Davis,Utah,355481
 Duchesne,Utah,19938
 Emery,Utah,10012

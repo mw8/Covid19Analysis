@@ -8,7 +8,7 @@ Scripts to plot and analyze covid-19 case data by county.
 ## Getting started
 * It is highly recommended to run the following command to automatically update git submodules.
 > git config --global submodule.recurse true
-* After the submodules are updated, just run
+* After the submodule (containing the data) is updated, just run
 > python3 analyze_data.py
 
 ## Example output

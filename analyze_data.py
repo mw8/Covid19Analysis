@@ -316,6 +316,7 @@ def plot_nd_states():
 
 if __name__ == "__main__":
     plot_county_list([('Santa Clara', 'California'), ('Los Angeles', 'California'),  ('Broward', 'Florida')])
+    #plot_county_list([('Pima', 'Arizona'), ('Mecklenburg', 'North Carolina'), ('Travis', 'Texas')])
     plot_nd_states()
     plt.show()
 

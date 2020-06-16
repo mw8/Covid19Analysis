@@ -23,7 +23,7 @@ def load_cd_states():
     n_states = len(states)
     cd = []
     for i in range(n_states):
-        r = c[c['state']==states[i]]
+        r = c[c['state'] == states[i]]
         cd.append(np.array(r[['cases', 'deaths']]))
     return states, cd, date
 
@@ -183,10 +183,10 @@ def fit_sigmoid(y0, n_ext):
 # estimate the linear growth rate (derivative) of a time series by linear fit for every consecutive 7 days
 def est_growth_rate(y):
     n = y.shape[0]
-    gr = np.zeros(n-6)
+    gr = np.zeros(n - 6)
     x = np.arange(7)
-    for i in range(n-6):
-        gr[i] = np.polyfit(x, y[i:i+7], 1)[0]
+    for i in range(n - 6):
+        gr[i] = np.polyfit(x, y[i:i + 7], 1)[0]
     return gr
 
 
@@ -284,6 +284,7 @@ def plot_county_list(county_list):
 
 # table of new deaths per day for the top 10 states
 def plot_nd_states():
+    n_days = 30
     states, cd_states, date_str = load_cd_states()
     n_states = len(states)
     # compute growth rates and their corresponding scores
@@ -291,32 +292,34 @@ def plot_nd_states():
     gr_score = np.zeros(n_states)
     for i in range(n_states):
         pop = load_pop_state(states[i])
-        gr.append(est_growth_rate(smooth_iir_1(cd_states[i][:,1])) / pop * 1e5)
-        gr_score[i] = np.mean(gr[i][-10:]) + np.max(gr[i])  + 10 * (pop > 2e5)
+        gr.append(est_growth_rate(smooth_iir_1(cd_states[i][-n_days-7:, 0])) / pop * 1e5)
+        gr_score[i] = np.mean(gr[i][-10:]) + np.max(gr[i]) + 10 * (pop > 2e5)
     # sort based on recent growth rate
     idx = np.argsort(gr_score)
     gr = [gr[i] for i in idx]
-    # plot
+    st = [states[i] for i in idx]
+    # plot worst states
     n_top = 10
     fig = plt.figure(figsize=(8, 5))
-    x = np.arange(60, 0, -1)
-    # uncomment to plot all states
-    # for i in range(n_states-n_top):
-    #     n = min(len(gr[i]), 60)
-    #     plt.plot(x[-n:], gr[i][-n:], color='tab:gray', lw=0.5)
-    for i in range(n_top-1,-1,-1):
-        n = min(len(gr[n_states-n_top+i]), 60)
-        plt.plot(x[-n:], gr[n_states-n_top+i][-n:], label=states[idx[n_states-n_top+i]], lw=2.0)
+    x = np.arange(n_days, 0, -1)
+    for i in range(n_top - 1, -1, -1):
+        n = min(len(gr[n_states - n_top + i]), n_days)
+        plt.plot(x[-n:], gr[n_states - n_top + i][-n:], label=st[n_states - n_top + i], lw=2.0)
+    # add specific states
+    plot_states = ['California', 'Florida']
+    for i in range(len(plot_states)):
+        j = st.index(plot_states[i])
+        if j >= n_top:
+            n = min(len(gr[j]), n_days)
+            plt.plot(x[-n:], gr[j][-n:], label=st[j], lw=2.0)
     plt.xlabel('Days Ago')
-    plt.ylabel('New Deaths per 100k (Weekly Average)')
-    plt.xlim(60, 0)
+    plt.ylabel('New Cases per 100k (Weekly Average)')
+    plt.xlim(n_days, 1)
     plt.legend(loc='upper left', fontsize='small')
     plt.title(date_str)
 
 
 if __name__ == "__main__":
-    plot_county_list([('Santa Clara', 'California'), ('Los Angeles', 'California'),  ('Broward', 'Florida')])
-    #plot_county_list([('Pima', 'Arizona'), ('Mecklenburg', 'North Carolina'), ('Travis', 'Texas')])
+    plot_county_list([('Santa Clara', 'California'), ('Los Angeles', 'California'), ('Broward', 'Florida')])
     plot_nd_states()
     plt.show()
-

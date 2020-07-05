@@ -56,30 +56,29 @@ def smooth_iir_1(y):
 
 # sum of sigmoids (generalized logistic functions)
 def sigmoid_sum(a, t):
-    assert(len(a) % 5 == 0)
-    m = len(a) // 5
+    assert(len(a) % 4 == 0)
+    m = len(a) // 4
     ss = 0
     for i in range(m):
-        ss += a[5*i] / ((a[5*i+1] + np.exp(-a[5*i+2] * (t - a[5*i+3]))) ** a[5*i+4])
+        ss += a[4*i] / ((1.0 + np.exp(-10.0 * a[4*i+1] * (t - a[4*i+2]))) ** a[4*i+3])
     return ss
 
 
 # compute the Jacobian of the residual in a sum of sigmoids fit
 def sigmoid_sum_jac(a, t, w):
-    assert(len(a) % 5 == 0)
-    m = len(a) // 5
+    assert(len(a) % 4 == 0)
+    m = len(a) // 4
     n = t.shape[0]
     jac = np.zeros((n, len(a)))
     for i in range(m):
-        e = np.exp(-a[5*i+2] * (t - a[5*i+3]))
-        d = (a[5*i+1] + e)
-        dp = w * d ** (-a[5*i+4]) / np.sqrt(n)
-        dpd = w * a[5*i+0] * (-a[5*i+4]) * (d ** (-a[5*i+4] - 1)) / np.sqrt(n)
-        jac[:, 5*i+0] = dp
-        jac[:, 5*i+1] = dpd
-        jac[:, 5*i+2] = dpd * (-(t - a[5*i+3])) * e
-        jac[:, 5*i+3] = dpd * a[5*i+2] * e
-        jac[:, 5*i+4] = a[5*i+0] * -dp * np.log(d)
+        e = np.exp(-10.0 * a[4*i+1] * (t - a[4*i+2]))
+        d = (1.0 + e)
+        dp = w * d ** (-a[4*i+3]) / np.sqrt(n)
+        dpd = w * a[4*i+0] * (-a[4*i+3]) * (d ** (-a[4*i+3] - 1)) / np.sqrt(n)
+        jac[:, 4*i+0] = dp
+        jac[:, 4*i+1] = dpd * (-10.0 * (t - a[4*i+2])) * e
+        jac[:, 4*i+2] = dpd * 10.0 * a[4*i+1] * e
+        jac[:, 4*i+3] = a[4*i+0] * -dp * np.log(d)
     return jac
 
 
@@ -87,19 +86,20 @@ def sigmoid_sum_jac_test():
     n = 100
     t = np.linspace(0., 1., n)
     w = np.ones(n)
-    a = np.array([1.5, 1, 6, 0.8, 1, 2, 0.5, 3, 1, 1.1])
+    a = np.array([1.5, 0.6, 0.8, 1, 2, 0.3, 1, 1.1])
     y0 = np.random.rand(n)
     # direct computation of jacobian of residual
     jac0 = sigmoid_sum_jac(a, t, w)
     # finite difference approximation
-    jac1 = np.zeros((n, 10))
+    jac1 = np.zeros((n, 8))
     eps = 1e-6
-    res0 = w * (sigmoid_sum(a, t) - y0) / np.sqrt(n)
-    for i in range(10):
+    for i in range(8):
         a1 = a.copy()
-        a1[i] += eps
+        a1[i] -= eps
+        res0 = w * (sigmoid_sum(a1, t) - y0) / np.sqrt(n)
+        a1[i] += 2*eps
         res1 = w * (sigmoid_sum(a1, t) - y0) / np.sqrt(n)
-        jac1[:, i] = (res1 - res0) / eps
+        jac1[:, i] = (res1 - res0) / (2 * eps)
     print((jac0 - jac1).max(0))
 
 
@@ -136,7 +136,7 @@ def fit_sigmoid_sum_wls_gn(x_init, t, w, y0_raw, iter_max, debug=False):
         x0 = x1.copy()
         x1 -= np.linalg.solve(jac.T @ jac + eps * np.eye(n), jac.T @ res) * 0.5
         x1 = np.maximum(x1, 1e-2)
-        x1 = np.minimum(x1, 1e+2)
+        x1 = np.minimum(x1, 1e+1)
 
         # update weighted residual and its Jacobian
         err0 = err1
@@ -172,7 +172,7 @@ def fit_sigmoid_sum_wls_gn(x_init, t, w, y0_raw, iter_max, debug=False):
             print(f'Iter: {it:2d},    Eps: {eps:.6f},    Err: {err1:.6f},    Best Err: {err_opt:.6f}')
     if debug:
         print()
-    x_opt[::5] *= y0_max
+    x_opt[::4] *= y0_max
     return x_opt
 
 
@@ -184,9 +184,9 @@ def fit_sigmoid_sum(y0, n_ext, n_sigmoids):
     w0[-10:] = 2
     alpha = 30 * np.polyfit(np.arange(7), y0[-7:], 1)[0] / np.max(y0)
     assert(n_sigmoids <= 2)
-    a0 = np.array([(1 - alpha) * 1.5, 1, 15, 0.3, 1, alpha * 1.5, 1, 15, 1, 1])
+    a0 = np.array([(1 - alpha) * 1.5, 1.5, 0.3, 1, alpha * 1.5, 1.5, 1, 1])
     if n_sigmoids == 1:
-        a0 = a0[:5]
+        a0 = a0[:4]
     a1 = fit_sigmoid_sum_wls_gn(a0, t0, w0, y0, 200)
     print(a1)
     t1 = np.concatenate((t0, 1. + (t0[1] - t0[0]) * (np.arange(n_ext) + 1.)))
@@ -268,7 +268,7 @@ def plot_nc_county(ax, cd, county, state, date, pop, n_sigmoids):
     c1 = c1[1:]
 
     # find cutoff
-    idx = max(np.argmax(dc0 > 1), np.argmax(c0 > 1))
+    idx = max(np.argmax(dc0 > 5), np.argmax(c0 > 5))
     dc0 = dc0[idx:]
     dc1 = dc1[idx:]
     c0 = c0[idx:]
@@ -339,6 +339,7 @@ def plot_nd_states():
 
 
 if __name__ == "__main__":
+    sigmoid_sum_jac_test()
     plot_county_list([('Santa Clara', 'California'), ('Los Angeles', 'California'), ('Broward', 'Florida')])
     plot_nd_states()
     plt.show()

@@ -184,7 +184,7 @@ def fit_sigmoid_sum(y0, n_ext, n_sigmoids):
     w0[-10:] = 2
     alpha = 30 * np.polyfit(np.arange(7), y0[-7:], 1)[0] / np.max(y0)
     assert(n_sigmoids <= 2)
-    a0 = np.array([(1 - alpha) * 1.5, 1.5, 0.3, 1, alpha * 1.5, 1.5, 1, 1])
+    a0 = np.array([(1 - alpha) * 1.5, 1.5, 0.2, 1, alpha * 1.5, 1.5, 0.8, 1])
     if n_sigmoids == 1:
         a0 = a0[:4]
     a1 = fit_sigmoid_sum_wls_gn(a0, t0, w0, y0, 200)
@@ -209,7 +209,7 @@ def est_growth_rate(y):
 def plot_cd_county(ax, cd, county, state, date, pop, n_sigmoids):
     # number of days to plot and extrapolate
     n_days = cd.shape[0]
-    n_days_ext = 20
+    n_days_ext = 10
     n_days_plot = 120
 
     # normalize by population (cases/deaths per 100,000)
@@ -252,7 +252,7 @@ def plot_cd_county(ax, cd, county, state, date, pop, n_sigmoids):
 def plot_nc_county(ax, cd, county, state, date, pop, n_sigmoids):
     # number of days to plot and extrapolate
     n_days = cd.shape[0]
-    n_days_ext = 20
+    n_days_ext = 10
     c0 = cd[:, 0]
     c0s = smooth_iir_1(c0)
 
@@ -264,22 +264,26 @@ def plot_nc_county(ax, cd, county, state, date, pop, n_sigmoids):
     # get new cases per day
     dc0 = np.diff(c0s)
     dc1 = np.diff(c1)
-    c0 = c0[1:]
-    c1 = c1[1:]
+    t0 = t0[1:]
+    t1 = t1[1:]
 
     # find cutoff
     idx = max(np.argmax(dc0 > 5), np.argmax(c0 > 5))
     dc0 = dc0[idx:]
     dc1 = dc1[idx:]
-    c0 = c0[idx:]
-    c1 = c1[idx:]
+    t0 = t0[idx:]
+    t1 = t1[idx:]
 
     # plot cases
-    ax.loglog(c0, dc0, color='tab:gray', marker='.')
-    ax.loglog(c0[-1], dc0[-1], color='r', marker='o')
-    ax.loglog(c1, dc1, color='k')
+    ax.plot(t0, dc0, color='tab:gray', marker='.')
+    ax.plot(t0[-1], dc0[-1], color='r', marker='o')
+    ax.plot(t1, dc1, color='k')
+    x0 = max(np.max(t0), np.max(t1))
+    x1 = min(np.min(t0), np.min(t1))
+    ax.set_xlim(x0, x1)
+    ax.set_yscale('log')
     ax.set_ylabel('Cases Per Day (smoothed)')
-    ax.set_xlabel('Total Cases')
+    ax.set_xlabel('Days Ago')
 
 
 # plot cases/deaths over time and new cases versus total cases
@@ -339,7 +343,6 @@ def plot_nd_states():
 
 
 if __name__ == "__main__":
-    sigmoid_sum_jac_test()
-    plot_county_list([('Santa Clara', 'California'), ('Los Angeles', 'California'), ('Broward', 'Florida')])
+    plot_county_list([('Los Angeles', 'California'), ('San Diego', 'California'), ('Orange', 'California')])
     plot_nd_states()
     plt.show()

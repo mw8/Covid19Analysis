@@ -181,7 +181,7 @@ def fit_sigmoid_sum(y0, n_ext, n_sigmoids):
     n = len(y0)
     t0 = np.linspace(0., 1., n)
     w0 = np.ones(n)
-    w0[-10:] = 2
+    w0[-3:] = [0.5, 0.3, 0.1]
     alpha = 30 * np.polyfit(np.arange(7), y0[-7:], 1)[0] / np.max(y0)
     assert(n_sigmoids <= 2)
     a0 = np.array([(1 - alpha) * 1.5, 1.5, 0.2, 1, alpha * 1.5, 1.5, 0.8, 1])
@@ -343,6 +343,6 @@ def plot_nd_states():
 
 
 if __name__ == "__main__":
-    plot_county_list([('Los Angeles', 'California'), ('San Diego', 'California'), ('Orange', 'California')])
+    plot_county_list([('Santa Clara', 'California'), ('Los Angeles', 'California'), ('Broward', 'Florida')])
     plot_nd_states()
     plt.show()

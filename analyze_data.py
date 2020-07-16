@@ -104,7 +104,7 @@ def sigmoid_sum_jac_test():
 
 
 # fit a sigmoid sum using the Gauss-Newton method to optimize weighted least squares
-def fit_sigmoid_sum_wls_gn(x_init, t, w, y0_raw, iter_max, debug=False):
+def fit_sigmoid_sum_wls_gn(x_init, t, w, y0_raw, iter_max, x_reg, debug=True):
     # initialize return value
     x_opt = x_init.copy()
 
@@ -114,14 +114,13 @@ def fit_sigmoid_sum_wls_gn(x_init, t, w, y0_raw, iter_max, debug=False):
     y0 = y0_raw / y0_max
 
     # Levenberg-Marquardt regularization parameters
-    tol = 1e-2
     eps_min = 1e-6
-    eps_max = 1e+1
+    eps_max = 1e+2
     eps_inc = 3
     eps_dec = 0.5
 
     # set up initial values
-    eps = 0.1
+    eps = 1
     eps_it = 0
     x1 = x_init.copy()
     res = w * (sigmoid_sum(x1, t) - y0) / np.sqrt(n)
@@ -134,7 +133,7 @@ def fit_sigmoid_sum_wls_gn(x_init, t, w, y0_raw, iter_max, debug=False):
 
         # update parameters
         x0 = x1.copy()
-        x1 -= np.linalg.solve(jac.T @ jac + eps * np.eye(n), jac.T @ res) * 0.5
+        x1 -= np.linalg.solve(jac.T @ jac + eps * np.eye(n), jac.T @ res) * 0.5 - x_reg * (x1 - x_init)
         x1 = np.maximum(x1, 1e-2)
         x1 = np.minimum(x1, 1e+1)
 
@@ -150,22 +149,28 @@ def fit_sigmoid_sum_wls_gn(x_init, t, w, y0_raw, iter_max, debug=False):
             x_opt = x1.copy()
 
         # update epsilon based on the error going up or down
-        if err1 <= err0 + tol:
+        if err1 <= err0 + 1e-2:
             eps *= eps_dec
             if eps < eps_min:
                 eps = eps_min
             if eps == eps_min:
-                if eps_it == 4:
+                if eps_it == 3:
                     break
                 else:
                     eps_it += 1
         else:  # backtrack
-            eps_it = 0
-            err1 = err0
-            x1 = x0.copy()
-            eps *= eps_inc
-            if eps > eps_max:
-                eps = eps_max
+            if eps == eps_max:
+                if eps_it == 3:
+                    break
+                else:
+                    eps_it += 1
+            else:
+                eps_it = 0
+                err1 = err0
+                x1 = x0.copy()
+                eps *= eps_inc
+                if eps > eps_max:
+                    eps = eps_max
 
         # possibly output debug information
         if debug:
@@ -181,13 +186,14 @@ def fit_sigmoid_sum(y0, n_ext, n_sigmoids):
     n = len(y0)
     t0 = np.linspace(0., 1., n)
     w0 = np.ones(n)
-    w0[-3:] = [0.5, 0.3, 0.1]
-    alpha = 30 * np.polyfit(np.arange(7), y0[-7:], 1)[0] / np.max(y0)
+    w0[-7:] = [0.5, 0.3, 0.2, 0.1, 0.1, 0.0, 0.0]
     assert(n_sigmoids <= 2)
-    a0 = np.array([(1 - alpha) * 1.5, 1.5, 0.2, 1, alpha * 1.5, 1.5, 0.8, 1])
+    a0 = np.array([0.3, 1.3, 0.3, 1, 1, 1.3, 1, 1])
+    a_reg = np.array([0., 1, 0, 1, 0, 1, 0, 1]) * 1e-2
     if n_sigmoids == 1:
         a0 = a0[:4]
-    a1 = fit_sigmoid_sum_wls_gn(a0, t0, w0, y0, 200)
+        a_reg = a_reg[:4]
+    a1 = fit_sigmoid_sum_wls_gn(a0, t0, w0, y0, 200, a_reg)
     print(a1)
     t1 = np.concatenate((t0, 1. + (t0[1] - t0[0]) * (np.arange(n_ext) + 1.)))
     y1 = sigmoid_sum(a1, t1)
@@ -206,11 +212,10 @@ def est_growth_rate(y):
 
 
 # plot cases and deaths over time
-def plot_cd_county(ax, cd, county, state, date, pop, n_sigmoids):
+def plot_cd_county(ax, cd, county, state, date, pop, n_sigmoids, n_days_ext, n_days_plot):
     # number of days to plot and extrapolate
     n_days = cd.shape[0]
-    n_days_ext = 10
-    n_days_plot = 120
+    n_days_plot = min(n_days_plot, n_days)
 
     # normalize by population (cases/deaths per 100,000)
     c0 = cd[:, 0] / pop * 1e5
@@ -235,7 +240,7 @@ def plot_cd_county(ax, cd, county, state, date, pop, n_sigmoids):
     # plot cases
     ax.plot(t1, c1, color='tab:gray')
     ax.plot(t0, c0, color='k')
-    ax.set_ylabel('Cases (per 100k)')
+    ax.set_ylabel('Total Cases per 100k')
     ax.set_xlabel('Days ago')
     ax.set_xlim(n_days_plot, -n_days_ext)
     ax.set_ylim(0, 1.25 * np.max(c0))
@@ -243,17 +248,17 @@ def plot_cd_county(ax, cd, county, state, date, pop, n_sigmoids):
     # plot deaths
     ax2.plot(t1, d1, color='xkcd:baby pink')
     ax2.plot(t0, d0, color='tab:red')
-    ax2.set_ylabel('Deaths (per 100k)', color='tab:red')
+    ax2.set_ylabel('Total Deaths per 100k', color='tab:red')
     ax2.tick_params(axis='y', labelcolor='tab:red')
     ax2.set_ylim(0, 2.5 * np.max(d0))
 
 
 # plot new cases versus total cases over time
-def plot_nc_county(ax, cd, county, state, date, pop, n_sigmoids):
+def plot_nc_county(ax, cd, county, state, date, pop, n_sigmoids, n_days_ext, n_days_plot):
     # number of days to plot and extrapolate
     n_days = cd.shape[0]
-    n_days_ext = 10
-    c0 = cd[:, 0]
+    n_days_plot = min(n_days_plot, n_days)
+    c0 = cd[:, 0] / pop * 1e5
     c0s = smooth_iir_1(c0)
 
     # fit sigmoid to cases
@@ -262,27 +267,26 @@ def plot_nc_county(ax, cd, county, state, date, pop, n_sigmoids):
     c1, c1_max = fit_sigmoid_sum(c0s, n_days_ext, n_sigmoids)
 
     # get new cases per day
-    dc0 = np.diff(c0s)
-    dc1 = np.diff(c1)
+    n_days = n_days - 1
     t0 = t0[1:]
     t1 = t1[1:]
+    dc0 = np.diff(c0s)
+    dc1 = np.diff(c1)
 
-    # find cutoff
-    idx = max(np.argmax(dc0 > 5), np.argmax(c0 > 5))
-    dc0 = dc0[idx:]
-    dc1 = dc1[idx:]
-    t0 = t0[idx:]
-    t1 = t1[idx:]
+    # cutoff
+    n_days_plot = min(n_days_plot, n_days)
+    t0 = t0[-n_days_plot:]
+    t1 = t1[-n_days_plot-n_days_ext:]
+    dc0 = dc0[-n_days_plot:]
+    dc1 = dc1[-n_days_plot-n_days_ext:]
 
     # plot cases
     ax.plot(t0, dc0, color='tab:gray', marker='.')
-    ax.plot(t0[-1], dc0[-1], color='r', marker='o')
     ax.plot(t1, dc1, color='k')
     x0 = max(np.max(t0), np.max(t1))
     x1 = min(np.min(t0), np.min(t1))
     ax.set_xlim(x0, x1)
-    ax.set_yscale('log')
-    ax.set_ylabel('Cases Per Day (smoothed)')
+    ax.set_ylabel('New Cases per 100k\nper Day (smoothed)')
     ax.set_xlabel('Days Ago')
 
 
@@ -297,8 +301,8 @@ def plot_county_list(county_list):
         county, state = county_list[i]
         cd = load_cd_county(csv_data, county, state)
         pop = load_pop_county(county, state)
-        plot_cd_county(axs[0, i], cd, county, state, date, pop, 2)
-        plot_nc_county(axs[1, i], cd, county, state, date, pop, 2)
+        plot_cd_county(axs[0, i], cd, county, state, date, pop, 2, 10, 120)
+        plot_nc_county(axs[1, i], cd, county, state, date, pop, 2, 10, 120)
 
 
 # table of new deaths per day for the top 10 states

@@ -60,7 +60,7 @@ def sigmoid_sum(a, t):
     m = len(a) // 4
     ss = 0
     for i in range(m):
-        ss += a[4*i] / ((1.0 + np.exp(-10.0 * a[4*i+1] * (t - a[4*i+2]))) ** a[4*i+3])
+        ss += a[4 * i] / ((1.0 + np.exp(-10.0 * a[4 * i + 1] * (t - a[4 * i + 2]))) ** a[4 * i + 3])
     return ss
 
 
@@ -71,14 +71,14 @@ def sigmoid_sum_jac(a, t, w):
     n = t.shape[0]
     jac = np.zeros((n, len(a)))
     for i in range(m):
-        e = np.exp(-10.0 * a[4*i+1] * (t - a[4*i+2]))
+        e = np.exp(-10.0 * a[4 * i + 1] * (t - a[4 * i + 2]))
         d = (1.0 + e)
-        dp = w * d ** (-a[4*i+3]) / np.sqrt(n)
-        dpd = w * a[4*i+0] * (-a[4*i+3]) * (d ** (-a[4*i+3] - 1)) / np.sqrt(n)
-        jac[:, 4*i+0] = dp
-        jac[:, 4*i+1] = dpd * (-10.0 * (t - a[4*i+2])) * e
-        jac[:, 4*i+2] = dpd * 10.0 * a[4*i+1] * e
-        jac[:, 4*i+3] = a[4*i+0] * -dp * np.log(d)
+        dp = w * d ** (-a[4 * i + 3]) / np.sqrt(n)
+        dpd = w * a[4 * i + 0] * (-a[4 * i + 3]) * (d ** (-a[4 * i + 3] - 1)) / np.sqrt(n)
+        jac[:, 4 * i + 0] = dp
+        jac[:, 4 * i + 1] = dpd * (-10.0 * (t - a[4 * i + 2])) * e
+        jac[:, 4 * i + 2] = dpd * 10.0 * a[4 * i + 1] * e
+        jac[:, 4 * i + 3] = a[4 * i + 0] * -dp * np.log(d)
     return jac
 
 
@@ -97,14 +97,14 @@ def sigmoid_sum_jac_test():
         a1 = a.copy()
         a1[i] -= eps
         res0 = w * (sigmoid_sum(a1, t) - y0) / np.sqrt(n)
-        a1[i] += 2*eps
+        a1[i] += 2 * eps
         res1 = w * (sigmoid_sum(a1, t) - y0) / np.sqrt(n)
         jac1[:, i] = (res1 - res0) / (2 * eps)
     print((jac0 - jac1).max(0))
 
 
 # fit a sigmoid sum using the Gauss-Newton method to optimize weighted least squares
-def fit_sigmoid_sum_wls_gn(x_init, t, w, y0_raw, iter_max, x_reg, debug=True):
+def fit_sigmoid_sum_wls_gn(x_init, t, w, y0_raw, iter_max, x_reg, debug=False):
     # initialize return value
     x_opt = x_init.copy()
 
@@ -186,15 +186,14 @@ def fit_sigmoid_sum(y0, n_ext, n_sigmoids):
     n = len(y0)
     t0 = np.linspace(0., 1., n)
     w0 = np.ones(n)
-    w0[-7:] = [0.5, 0.3, 0.2, 0.1, 0.1, 0.0, 0.0]
+    w0[-7:] = [0.3, 0.2, 0.1, 0.1, 0.0, 0.0, 0.0]
     assert(n_sigmoids <= 2)
-    a0 = np.array([0.3, 1.3, 0.3, 1, 1, 1.3, 1, 1])
+    a0 = np.array([0.3, 1, 0.3, 1, 1, 1, 1, 1])
     a_reg = np.array([0., 1, 0, 1, 0, 1, 0, 1]) * 1e-2
     if n_sigmoids == 1:
         a0 = a0[:4]
         a_reg = a_reg[:4]
     a1 = fit_sigmoid_sum_wls_gn(a0, t0, w0, y0, 200, a_reg)
-    print(a1)
     t1 = np.concatenate((t0, 1. + (t0[1] - t0[0]) * (np.arange(n_ext) + 1.)))
     y1 = sigmoid_sum(a1, t1)
     y1_max = sigmoid_sum(a1, 100.)
@@ -276,9 +275,9 @@ def plot_nc_county(ax, cd, county, state, date, pop, n_sigmoids, n_days_ext, n_d
     # cutoff
     n_days_plot = min(n_days_plot, n_days)
     t0 = t0[-n_days_plot:]
-    t1 = t1[-n_days_plot-n_days_ext:]
+    t1 = t1[-n_days_plot - n_days_ext:]
     dc0 = dc0[-n_days_plot:]
-    dc1 = dc1[-n_days_plot-n_days_ext:]
+    dc1 = dc1[-n_days_plot - n_days_ext:]
 
     # plot cases
     ax.plot(t0, dc0, color='tab:gray', marker='.')
@@ -315,7 +314,7 @@ def plot_nd_states():
     gr_score = np.zeros(n_states)
     for i in range(n_states):
         pop = load_pop_state(states[i])
-        gr.append(est_growth_rate(smooth_iir_1(cd_states[i][-n_days-7:, 0])) / pop * 1e5)
+        gr.append(est_growth_rate(smooth_iir_1(cd_states[i][-n_days - 7:, 0])) / pop * 1e5)
         gr_score[i] = (np.mean(gr[i][-14:]) + (np.max(gr[i]) - np.min(gr[i])) / 10) * (pop > 2e5)
     # sort based on recent growth rate
     idx = np.argsort(gr_score)

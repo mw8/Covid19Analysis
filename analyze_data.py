@@ -186,10 +186,10 @@ def fit_sigmoid_sum(y0, n_ext, n_sigmoids):
     n = len(y0)
     t0 = np.linspace(0., 1., n)
     w0 = np.ones(n)
-    w0[-7:] = [0.3, 0.2, 0.1, 0.1, 0.0, 0.0, 0.0]
+    w0[-5:] = [0.8, 0.5, 0.3, 0.2, 0.1]
     assert(n_sigmoids <= 2)
-    a0 = np.array([0.3, 1, 0.3, 1, 1, 1, 1, 1])
-    a_reg = np.array([0., 1, 0, 1, 0, 1, 0, 1]) * 1e-2
+    a0 = np.array([0.3, 1, 0.3, 1.3, 1, 1, 1, 1])
+    a_reg = np.array([0., 1, 0, 1, 0, 1, 0, 1]) * 1e-3
     if n_sigmoids == 1:
         a0 = a0[:4]
         a_reg = a_reg[:4]

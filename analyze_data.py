@@ -1,7 +1,8 @@
+import math
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-
+import matplotlib.dates as mdates
 
 # load population data for a county
 def load_pop_county(county, state):
@@ -36,7 +37,7 @@ def load_cd_county(csv_data, county, state):
 
 # apply first-order IIR to smooth data
 def smooth_iir_1(y):
-    alpha = 0.3
+    alpha = 0.2
     n = len(y)
     # first order IIR forward scan
     z0 = y.copy()
@@ -56,7 +57,7 @@ def smooth_iir_1(y):
 
 # sum of sigmoids (generalized logistic functions)
 def sigmoid_sum(a, t):
-    assert(len(a) % 4 == 0)
+    assert (len(a) % 4 == 0)
     m = len(a) // 4
     ss = 0
     for i in range(m):
@@ -66,7 +67,7 @@ def sigmoid_sum(a, t):
 
 # compute the Jacobian of the residual in a sum of sigmoids fit
 def sigmoid_sum_jac(a, t, w):
-    assert(len(a) % 4 == 0)
+    assert (len(a) % 4 == 0)
     m = len(a) // 4
     n = t.shape[0]
     jac = np.zeros((n, len(a)))
@@ -104,7 +105,7 @@ def sigmoid_sum_jac_test():
 
 
 # fit a sigmoid sum using the Gauss-Newton method to optimize weighted least squares
-def fit_sigmoid_sum_wls_gn(x_init, t, w, y0_raw, iter_max, x_reg, debug=False):
+def fit_sigmoid_sum_wls_gn(x_init, t, w, y0_raw, iter_max, debug=False):
     # initialize return value
     x_opt = x_init.copy()
 
@@ -133,9 +134,11 @@ def fit_sigmoid_sum_wls_gn(x_init, t, w, y0_raw, iter_max, x_reg, debug=False):
 
         # update parameters
         x0 = x1.copy()
-        x1 -= np.linalg.solve(jac.T @ jac + eps * np.eye(n), jac.T @ res) * 0.5 - x_reg * (x1 - x_init)
-        x1 = np.maximum(x1, 1e-2)
-        x1 = np.minimum(x1, 1e+1)
+        x1 -= np.linalg.solve(jac.T @ jac + eps * np.eye(n), jac.T @ res) * 0.5
+        x1[0::4] = np.maximum(np.minimum(x1[0::4], 100), 0.01)
+        x1[1::4] = np.maximum(np.minimum(x1[1::4], 5), 0.1)
+        x1[2::4] = np.maximum(np.minimum(x1[2::4], 2),-1.0)
+        x1[3::4] = np.maximum(np.minimum(x1[3::4], 5), 0.1)
 
         # update weighted residual and its Jacobian
         err0 = err1
@@ -178,40 +181,46 @@ def fit_sigmoid_sum_wls_gn(x_init, t, w, y0_raw, iter_max, x_reg, debug=False):
     if debug:
         print()
     x_opt[::4] *= y0_max
-    return x_opt
+    return x_opt, err_opt
 
 
-# fit sigmoid function (generalized logistic) using iteratively reweighted least squares
-def fit_sigmoid_sum(y0, n_ext, n_sigmoids):
+# fit sum of sigmoid functions (generalized logistics) using iteratively re-weighted least squares
+def fit_sigmoid_sum(y0, n_ext, discount_last_5):
     n = len(y0)
     t0 = np.linspace(0., 1., n)
     w0 = np.ones(n)
-    w0[-5:] = [0.8, 0.5, 0.3, 0.2, 0.1]
-    assert(n_sigmoids <= 2)
-    a0 = np.array([0.3, 1, 0.3, 1.3, 1, 1, 1, 1])
-    a_reg = np.array([0., 1, 0, 1, 0, 1, 0, 1]) * 1e-3
-    if n_sigmoids == 1:
-        a0 = a0[:4]
-        a_reg = a_reg[:4]
-    a1 = fit_sigmoid_sum_wls_gn(a0, t0, w0, y0, 200, a_reg)
+    if discount_last_5:
+        w0[-5:] = [0.8, 0.5, 0.3, 0.2, 0.1]
+    opt_a1 = []
+    opt_b1 = float('inf')
+    for n_sig in range(1, 5):
+        a0 = np.ones(4 * n_sig)
+        for i_sig in range(0, n_sig):
+            a0[4 * i_sig + 2] = (i_sig + 1.0) / (n_sig + 1.0)
+        a1, err = fit_sigmoid_sum_wls_gn(a0, t0, w0, y0, 200)
+        b1 = 10.0 * math.log(err / n) + n_sig * math.log(n) # bayesian information criterion
+        if b1 < opt_b1:
+            opt_b1 = b1
+            opt_a1 = a1
     t1 = np.concatenate((t0, 1. + (t0[1] - t0[0]) * (np.arange(n_ext) + 1.)))
-    y1 = sigmoid_sum(a1, t1)
-    y1_max = sigmoid_sum(a1, 100.)
+    y1 = sigmoid_sum(opt_a1, t1)
+    y1_max = sigmoid_sum(opt_a1, 10.)
     return y1, y1_max
 
 
 # estimate the linear growth rate (derivative) of a time series by linear fit for every consecutive 7 days
 def est_growth_rate(y):
+    m = 7
     n = y.shape[0]
-    gr = np.zeros(n - 6)
-    x = np.arange(7)
-    for i in range(n - 6):
-        gr[i] = np.polyfit(x, y[i:i + 7], 1)[0]
+    gr = np.zeros(n - m + 1)
+    x = np.arange(m)
+    for i in range(n - m + 1):
+        gr[i] = np.polyfit(x, y[i:i + m], 1)[0]
     return gr
 
 
 # plot cases and deaths over time
-def plot_cd_county(ax, cd, county, state, date, pop, n_sigmoids, n_days_ext, n_days_plot):
+def plot_cd_county(ax1, cd, county, state, date, pop, n_days_ext, n_days_plot):
     # number of days to plot and extrapolate
     n_days = cd.shape[0]
     n_days_plot = min(n_days_plot, n_days)
@@ -223,37 +232,45 @@ def plot_cd_county(ax, cd, county, state, date, pop, n_sigmoids, n_days_ext, n_d
     # fit sigmoid to cases and deaths
     t0 = np.flip(np.arange(n_days) + 1.)
     t1 = np.flip(np.arange(-n_days_ext, n_days) + 1.)
-    c1, c1_max = fit_sigmoid_sum(smooth_iir_1(c0), n_days_ext, n_sigmoids)
-    d1, d1_max = fit_sigmoid_sum(smooth_iir_1(d0), n_days_ext, n_sigmoids)
+    c1, c1_max = fit_sigmoid_sum(smooth_iir_1(c0), n_days_ext, True)
+    d1, d1_max = fit_sigmoid_sum(smooth_iir_1(d0), n_days_ext, False)
+
+    # get datetimes for each day
+    dt_now = np.datetime64(date)
+    to_days = lambda t: dt_now - np.timedelta64(int(t) - 1, 'D')
+    dt0 = list(map(to_days, t0))
+    dt1 = list(map(to_days, t1))
 
     # title
-    ax.set_title('{} County, {} - {}'.format(county, state, date), {'fontsize': 10})
+    ax1.set_title('{} County, {}'.format(county, state), {'fontsize': 10})
 
     # plot cases asymptote
-    ax.plot([t1[0], t1[-1]], [c1_max, c1_max], lw=0.5, color='tab:gray')
+    ax1.plot([dt1[0], dt1[-1]], [c1_max, c1_max], lw=0.5, color='tab:gray')
 
     # plot deaths asymptote
-    ax2 = ax.twinx()
-    ax2.plot([t1[0], t1[-1]], [d1_max, d1_max], lw=0.5, color='xkcd:baby pink')
+    ax2 = ax1.twinx()
+    ax2.plot([dt1[0], dt1[-1]], [d1_max, d1_max], lw=0.5, color='xkcd:baby pink')
 
     # plot cases
-    ax.plot(t1, c1, color='tab:gray')
-    ax.plot(t0, c0, color='k')
-    ax.set_ylabel('Total Cases per 100k')
-    ax.set_xlabel('Days ago')
-    ax.set_xlim(n_days_plot, -n_days_ext)
-    ax.set_ylim(0, 1.25 * np.max(c0))
+    ax1.plot(dt1, c1, color='tab:gray')
+    ax1.plot(dt0, c0, color='k')
+    ax1.set_ylabel('Total Cases per 100k')
+    ax1.set_xlim(dt0[-n_days_plot], dt1[-1])
+    ax1.set_ylim(0, 1.25 * np.max(c0))
 
     # plot deaths
-    ax2.plot(t1, d1, color='xkcd:baby pink')
-    ax2.plot(t0, d0, color='tab:red')
+    ax2.plot(dt1, d1, color='xkcd:baby pink')
+    ax2.plot(dt0, d0, color='tab:red')
     ax2.set_ylabel('Total Deaths per 100k', color='tab:red')
     ax2.tick_params(axis='y', labelcolor='tab:red')
     ax2.set_ylim(0, 2.5 * np.max(d0))
 
+    ax1.xaxis.set_major_locator(mdates.MonthLocator())
+    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%b'))
+
 
 # plot new cases versus total cases over time
-def plot_nc_county(ax, cd, county, state, date, pop, n_sigmoids, n_days_ext, n_days_plot):
+def plot_nc_county(ax, cd, county, state, date, pop, n_days_ext, n_days_plot):
     # number of days to plot and extrapolate
     n_days = cd.shape[0]
     n_days_plot = min(n_days_plot, n_days)
@@ -263,7 +280,7 @@ def plot_nc_county(ax, cd, county, state, date, pop, n_sigmoids, n_days_ext, n_d
     # fit sigmoid to cases
     t0 = np.flip(np.arange(n_days) + 1.)
     t1 = np.flip(np.arange(-n_days_ext, n_days) + 1.)
-    c1, c1_max = fit_sigmoid_sum(c0s, n_days_ext, n_sigmoids)
+    c1, c1_max = fit_sigmoid_sum(c0s, n_days_ext, True)
 
     # get new cases per day
     n_days = n_days - 1
@@ -279,14 +296,21 @@ def plot_nc_county(ax, cd, county, state, date, pop, n_sigmoids, n_days_ext, n_d
     dc0 = dc0[-n_days_plot:]
     dc1 = dc1[-n_days_plot - n_days_ext:]
 
+    # get datetimes for each day
+    dt_now = np.datetime64(date)
+    to_days = lambda t: dt_now - np.timedelta64(int(t) - 1, 'D')
+    dt0 = list(map(to_days, t0))
+    dt1 = list(map(to_days, t1))
+
     # plot cases
-    ax.plot(t0, dc0, color='tab:gray', marker='.')
-    ax.plot(t1, dc1, color='k')
-    x0 = max(np.max(t0), np.max(t1))
-    x1 = min(np.min(t0), np.min(t1))
-    ax.set_xlim(x0, x1)
+    ax.set_title('{} County, {}'.format(county, state), {'fontsize': 10})
+    ax.plot(dt0[:-3], dc0[:-3], color='tab:gray', marker='.')
+    ax.plot(dt1, dc1, color='k')
+    ax.set_xlim(dt1[0], dt1[-1])
     ax.set_ylabel('New Cases per 100k\nper Day (smoothed)')
-    ax.set_xlabel('Days Ago')
+
+    ax.xaxis.set_major_locator(mdates.MonthLocator())
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%b'))
 
 
 # plot cases/deaths over time and new cases versus total cases
@@ -300,8 +324,8 @@ def plot_county_list(county_list):
         county, state = county_list[i]
         cd = load_cd_county(csv_data, county, state)
         pop = load_pop_county(county, state)
-        plot_cd_county(axs[0, i], cd, county, state, date, pop, 2, 10, 120)
-        plot_nc_county(axs[1, i], cd, county, state, date, pop, 2, 10, 120)
+        plot_cd_county(axs[0, i], cd, county, state, date, pop, 10, 200)
+        plot_nc_county(axs[1, i], cd, county, state, date, pop, 10, 200)
 
 
 # table of new deaths per day for the top 10 states
@@ -347,5 +371,6 @@ def plot_nd_states():
 
 if __name__ == "__main__":
     plot_county_list([('Santa Clara', 'California'), ('Los Angeles', 'California'), ('Broward', 'Florida')])
-    plot_nd_states()
+    plot_county_list([('Winnebago', 'Illinois'), ('Cook', 'Illinois'), ('DuPage', 'Illinois')])
+    # plot_nd_states()
     plt.show()

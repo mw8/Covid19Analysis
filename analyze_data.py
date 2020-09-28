@@ -136,9 +136,9 @@ def fit_sigmoid_sum_wls_gn(x_init, t, w, y0_raw, iter_max, debug=False):
         x0 = x1.copy()
         x1 -= np.linalg.solve(jac.T @ jac + eps * np.eye(n), jac.T @ res) * 0.5
         x1[0::4] = np.maximum(np.minimum(x1[0::4], 100), 0.01)
-        x1[1::4] = np.maximum(np.minimum(x1[1::4], 5), 0.1)
-        x1[2::4] = np.maximum(np.minimum(x1[2::4], 2),-1.0)
-        x1[3::4] = np.maximum(np.minimum(x1[3::4], 5), 0.1)
+        x1[1::4] = np.maximum(np.minimum(x1[1::4], 10), 0.1)
+        x1[2::4] = np.maximum(np.minimum(x1[2::4], 1.5), -0.5)
+        x1[3::4] = np.maximum(np.minimum(x1[3::4], 10), 0.1)
 
         # update weighted residual and its Jacobian
         err0 = err1
@@ -198,7 +198,7 @@ def fit_sigmoid_sum(y0, n_ext, discount_last_5):
         for i_sig in range(0, n_sig):
             a0[4 * i_sig + 2] = (i_sig + 1.0) / (n_sig + 1.0)
         a1, err = fit_sigmoid_sum_wls_gn(a0, t0, w0, y0, 200)
-        b1 = 10.0 * math.log(err / n) + n_sig * math.log(n) # bayesian information criterion
+        b1 = 8.0 * math.log(err / n) + n_sig * math.log(n) # bayesian information criterion
         if b1 < opt_b1:
             opt_b1 = b1
             opt_a1 = a1

@@ -330,7 +330,7 @@ def plot_county_list(county_list):
 
 # table of new deaths per day for the top 10 states
 def plot_nd_states():
-    n_days = 50
+    n_days = 100
     states, cd_states, date_str = load_cd_states()
     n_states = len(states)
     # compute growth rates and their corresponding scores
@@ -372,5 +372,5 @@ def plot_nd_states():
 if __name__ == "__main__":
     plot_county_list([('Santa Clara', 'California'), ('Los Angeles', 'California'), ('Broward', 'Florida')])
     plot_county_list([('Winnebago', 'Illinois'), ('Cook', 'Illinois'), ('DuPage', 'Illinois')])
-    # plot_nd_states()
+    plot_nd_states()
     plt.show()

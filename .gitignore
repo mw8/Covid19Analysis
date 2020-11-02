@@ -188,3 +188,6 @@ fabric.properties
 
 # *.iml
 
+.DS_Store
+.vscode
+

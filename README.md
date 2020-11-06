@@ -6,12 +6,12 @@ Scripts to plot and analyze covid-19 case data by county.
 * County populations are from the [U.S. Census Bureau 2019 estimates](https://www.census.gov/data/tables/time-series/demo/popest/2010s-counties-total.html).
 
 ## Getting started
+* Install [Julia](https://julialang.org). You may need to consult the [instructions here](https://julialang.org/downloads/platform/).
 * It is highly recommended to run the following command to automatically update git submodules.
 > git config --global submodule.recurse true
 * After the submodule (containing the data) is updated, just run
-> python3 analyze_data.py
+> julia analyze_data.py
 
 ## Example output
-![Example plots of Los Angeles, San Diego, and Orange counties](figures/example_1.png)
+![Example plots of San Diego, Los Angeles, and Santa Clara counties](figures/example.png)
 
-![Example plot of new deaths for the 10 worst states](figures/example_2.png)

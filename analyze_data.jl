@@ -52,63 +52,65 @@ function smooth_iir_1(y)
     (z0 + z1) * 0.5
 end
 
-# sum of sigmoids (generalized logistic function)
-function sigmoid_sum(a, t)
+# sum of derivatives of sigmoids (generalized logistic function)
+function sigmoid_deriv_sum(a, t)
     @assert(length(a) % 4 == 0)
     b = reshape(a, 4, :)
     m = size(b, 2)
     y = zeros(length(t))
     for i = 1:m
-        y .+= b[1,i] ./ ((1.0 .+ exp.((-10.0 * b[2,i]) * (t .- b[3,i]))).^b[4,i])
+        e = exp.((-10.0 * b[2,i]) * (t .- b[3,i]))
+        y .+= (4.0 * b[1,i]) * e ./ ((1.0 .+ e).^(1.0 + b[4,i]))
     end
     y
 end
 
-# Jacobian of the residual in a sum of sigmoids fit
-function sigmoid_sum_jac(a, t, w)
+# Jacobian of the weighted residual in a sum of sigmoids fit
+function sigmoid_deriv_sum_jac(a, t, w)
     @assert(length(a) % 4 == 0)
     b = reshape(a, 4, :)
     m = size(b, 2)
     n = length(t)
     jac = zeros(n, 4, m)
+    u = (4.0 / sqrt(n)) * w
     for i = 1:m
-        e = exp.(-10.0 * b[2,i] * (t .- b[3,i]))                    # exponential term
-        d = (1 .+ e)                                                # denominator
-        p = w .* (d.^(-b[4,i])) ./ sqrt(n)                          # weighted denom to a power
-        v = w .* (b[1,i] * -b[4,i]) .* (d.^(-b[4,i] - 1)) / sqrt(n) # derivative of p
-        jac[:,1,i] = p
-        jac[:,2,i] = v .* (-10.0 * (t .- b[3,i])) .* e
-        jac[:,3,i] = v .* (10.0 * b[2,i]) .* e
-        jac[:,4,i] = b[1,i] * -p .* log.(d)
+        e = exp.(-10.0 * b[2,i] * (t .- b[3,i]))
+        d = (1 .+ e)
+        g = b[1,i] * u .* e
+        h = g .* d.^(-(2.0 + b[4,i])) .* (1.0 .- b[4,i] * e)
+        jac[:,1,i] = u .* e ./ (d.^(1.0 + b[4,i]))
+        jac[:,2,i] = h .* (-10.0 * (t .- b[3,i]))
+        jac[:,3,i] = h * (10.0 * b[2,i])
+        jac[:,4,i] = g .* d.^(-(1.0 + b[4,i])) .* (-log.(d))
     end
     reshape(jac, n, :)
 end
 
 # test for Jacobian of the residual in a sum of sigmoids fit
-function test_sigmoid_sum_jac()
+function test_sigmoid_deriv_sum_jac()
     n = 100
     t = collect(range(0, stop=1, length=n))
     w = ones(n)
     a = [1.5, 0.6, 0.8, 1, 2, 0.3, 1, 1.1]
     y0 = rand(n)
     # direct computation of Jacobian of residual
-    jac0 = sigmoid_sum_jac(a, t, w)
+    jac0 = sigmoid_deriv_sum_jac(a, t, w)
     # finite difference approximation
     jac1 = zeros(n, 8)
     eps = 1e-6
     for i = 1:8
         a1 = copy(a)
         a1[i] -= eps
-        res0 = w .* (sigmoid_sum(a1, t) - y0) / sqrt(n)
+        res0 = w .* (sigmoid_deriv_sum(a1, t) - y0) / sqrt(n)
         a1[i] += 2 * eps
-        res1 = w .* (sigmoid_sum(a1, t) - y0) / sqrt(n)
+        res1 = w .* (sigmoid_deriv_sum(a1, t) - y0) / sqrt(n)
         jac1[:, i] = (res1 - res0) / (2 * eps)
     end
     println(maximum(abs.(jac0 - jac1)))
 end
 
 # fit a sigmoid sum using the Gauss-Newton method to optimize weighted least squares
-function fit_sigmoid_sum_wls_gn(x_init, t, w, y0_raw, iter_max, debug::Bool=false)
+function fit_sigmoid_deriv_sum_wls_gn(x_init, t, w, y0_raw, iter_max, debug::Bool=false)
     # initialize return value
     x_opt = copy(x_init)
 
@@ -125,14 +127,14 @@ function fit_sigmoid_sum_wls_gn(x_init, t, w, y0_raw, iter_max, debug::Bool=fals
 
     # regularization coefficients
     c_reg = zeros(n)
-    c_reg[1:4:end] .= 1e-3
+    c_reg[1:4:end] .= 1e-6
 
     # set up initial values
     eps = 1.0
     eps_it = 0
     x1 = copy(x_init)
-    res = w .* (sigmoid_sum(x1, t) - y0) / sqrt(n)
-    jac = sigmoid_sum_jac(x1, t, w)
+    res = w .* (sigmoid_deriv_sum(x1, t) - y0) / sqrt(n)
+    jac = sigmoid_deriv_sum_jac(x1, t, w)
     err1 = norm(res)
     err_opt = err1
 
@@ -144,13 +146,13 @@ function fit_sigmoid_sum_wls_gn(x_init, t, w, y0_raw, iter_max, debug::Bool=fals
         x1 -= (jac' * jac + eps * I) \ (jac' * res) * 0.5 - (c_reg .* x1)
         x1[1:4:end] = max.(min.(x1[1:4:end], 100.0), 0.01)
         x1[2:4:end] = max.(min.(x1[2:4:end],  10.0),  0.1)
-        x1[3:4:end] = max.(min.(x1[3:4:end],   1.5), -0.5)
+        x1[3:4:end] = max.(min.(x1[3:4:end],   1.1), -0.1)
         x1[4:4:end] = max.(min.(x1[4:4:end],  10.0),  0.1)
 
         # update weighted residual and its Jacobian
         err0 = err1
-        res = w .* (sigmoid_sum(x1, t) - y0) / sqrt(n)
-        jac = sigmoid_sum_jac(x1, t, w)
+        res = w .* (sigmoid_deriv_sum(x1, t) - y0) / sqrt(n)
+        jac = sigmoid_deriv_sum_jac(x1, t, w)
         err1 = norm(res)
 
         # lock in parameters if the error goes down
@@ -205,7 +207,7 @@ function fit_sigmoid_sum_wls_gn(x_init, t, w, y0_raw, iter_max, debug::Bool=fals
 end
 
 # fit sum of sigmoid functions (generalized logistics) using iteratively re-weighted least squares
-function fit_sigmoid_sum(y0, n_ext, discount_last_5::Bool=true)
+function fit_sigmoid_deriv_sum(y0, n_ext, discount_last_5::Bool=true)
     n = length(y0)
     t0 = collect(range(0, stop=1, length=n))
     w0 = ones(n)
@@ -214,21 +216,21 @@ function fit_sigmoid_sum(y0, n_ext, discount_last_5::Bool=true)
     end
     opt_a1 = []
     opt_b1 = Inf
-    for n_sig = 1:4
+    for n_sig = 1:5
         a0 = ones(4, n_sig)
         for i_sig = 1:n_sig
             a0[2,i_sig] = (i_sig + 1.0) / (n_sig + 1.0)
         end
-        a1, err = fit_sigmoid_sum_wls_gn(a0[:], t0, w0, y0, 200)
-        b1 = 0.5 * n_sig + log(err) # bayesian information criterion
+        a1, err = fit_sigmoid_deriv_sum_wls_gn(a0[:], t0, w0, y0, 200)
+        b1 = 0.2 * n_sig + log(err) # bayesian information criterion
         if b1 < opt_b1
             opt_b1 = b1
             opt_a1 = a1
         end
     end
     t1 = [t0; 1.0 .+ (t0[2] - t0[1]) * collect(1:n_ext)]
-    y1 = sigmoid_sum(opt_a1, t1)
-    y1_max = sigmoid_sum(opt_a1, 10.0)
+    y1 = sigmoid_deriv_sum(opt_a1, t1)
+    y1_max = sigmoid_deriv_sum(opt_a1, 10.0)
     y1, y1_max
 end
 
@@ -259,9 +261,6 @@ function plot_cd_county(cd, county, state, date, pop, n_days_ext=10, n_days_plot
     # normalize by population (cases/deaths per 100,000)
     c0 = cd[:,1] / pop * 1e5
     d0 = cd[:,2] / pop * 1e5
-    # fit sigmoid to cases and deaths
-    c1, c1_max = fit_sigmoid_sum(smooth_iir_1(c0), n_days_ext, true)
-    d1, d1_max = fit_sigmoid_sum(smooth_iir_1(d0), n_days_ext, false)
     # get dates for each day
     n_days = size(cd, 1)
     t0 = collect(date - Day(n_days - 1):Day(1):date)
@@ -298,21 +297,19 @@ end
 function plot_nc_county(cd, county, state, date, pop, n_days_ext=10, n_days_plot=250)
     # normalize by population (cases per 100,000)
     c0 = cd[:,1] / pop * 1e5
-    # fit sigmoid to cases
+    # fit sigmoid derivative to new cases
     c0s = smooth_iir_1(c0)
-    c1, c1_max = fit_sigmoid_sum(c0s, n_days_ext)
-    # get new cases per day
     dc0 = diff(c0s)
-    dc1 = diff(c1)
+    dc1, dc1_max = fit_sigmoid_deriv_sum(dc0, n_days_ext)
     # get dates for each day
     n_days = size(cd, 1) - 1
     t0 = collect(date - Day(n_days - 1):Day(1):date)
     t1 = collect(date - Day(n_days - 1):Day(1):date + Day(n_days_ext))
     # cutoff
     n_days_plot = min(n_days_plot, n_days)
-    t0 = t0[end - (n_days_plot - 1):end]
+    t0 = t0[end - (n_days_plot - 1):end - 3]
     t1 = t1[end - (n_days_plot + n_days_ext - 1):end]
-    dc0 = dc0[end - (n_days_plot - 1):end]
+    dc0 = dc0[end - (n_days_plot - 1):end - 3]
     dc1 = dc1[end - (n_days_plot + n_days_ext - 1):end]
     # plot cases
     xt = filter_first_of_month(t1)
@@ -334,8 +331,9 @@ function plot_county_list(df, county_list)
         p[i,1] = plot_cd_county(cd, county, state, date, pop)
         p[i,2] = plot_nc_county(cd, county, state, date, pop)
     end
-    plot(p..., layout=(2, n), size=(1200, 600), margin=10mm, right_margin=15mm)
+    plot(p..., layout=(2, n), size=(1400, 600), margin=10mm, right_margin=20mm)
 end
+
 
 # load data
 print("Loading Covid-19 county cases/deaths data...")
@@ -350,3 +348,8 @@ display(plot_county_list(df, [("Winnebago", "Illinois"),
 display(plot_county_list(df, [("Santa Clara", "California"),
                               ("Los Angeles", "California"),
                               ("Broward", "Florida")]))
+
+display(plot_county_list(df, [("San Diego", "California"),
+                              ("Los Angeles", "California"),
+                              ("Santa Clara", "California")]))
+png("figures/example.png")

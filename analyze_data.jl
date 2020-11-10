@@ -32,8 +32,7 @@ function load_cd_states()
 end
 
 # apply bidirectional first-order IIR to smooth data
-function smooth_iir_1(y)
-    alpha = 0.2
+function smooth_iir_1(y, alpha=0.2)
     n = length(y)
     # first order IIR forward
     z0 = copy(y)
@@ -127,7 +126,7 @@ function fit_sigmoid_deriv_sum_wls_gn(x_init, t, w, y0_raw, iter_max, debug::Boo
 
     # regularization coefficients
     c_reg = zeros(n)
-    c_reg[1:4:end] .= 1e-6
+    c_reg[1:4:end] .= 1e-4
 
     # set up initial values
     eps = 1.0
@@ -203,7 +202,7 @@ function fit_sigmoid_deriv_sum_wls_gn(x_init, t, w, y0_raw, iter_max, debug::Boo
     end
 
     x_opt[1:4:end] *= y0_max
-    x_opt, err_opt
+    x_opt, err_opt / length(y0)
 end
 
 # fit sum of sigmoid functions (generalized logistics) using iteratively re-weighted least squares
@@ -216,8 +215,9 @@ function fit_sigmoid_deriv_sum(y0, n_ext, discount_last_5::Bool=true)
     end
     opt_a1 = []
     opt_b1 = Inf
-    for n_sig = 1:5
+    for n_sig = 1:6
         a0 = ones(4, n_sig)
+        a0[1,:] .= 0.5
         for i_sig = 1:n_sig
             a0[2,i_sig] = (i_sig + 1.0) / (n_sig + 1.0)
         end
@@ -256,20 +256,8 @@ function filter_first_of_month(t0)
     t1
 end
 
-# plot covid19 cases and deaths over time
-function plot_cd_county(cd, county, state, date, pop, n_days_ext=10, n_days_plot=250)
-    # normalize by population (cases/deaths per 100,000)
-    c0 = cd[:,1] / pop * 1e5
-    d0 = cd[:,2] / pop * 1e5
-    # get dates for each day
-    n_days = size(cd, 1)
-    t0 = collect(date - Day(n_days - 1):Day(1):date)
-    # cutoff
-    n_days_plot = min(n_days_plot, n_days)
-    t0 = t0[end - (n_days_plot - 1):end]
-    c0 = c0[end - (n_days_plot - 1):end]
-    d0 = d0[end - (n_days_plot - 1):end]
-    # hack to deal with x ticks for two y axes (twinx() is undocumented/buggy)
+# hack to deal with twinx() undocumented/buggy behavior for dates: convert to int64
+function dates_int64_xticks(t0)
     x = collect(0:length(t0) - 1)
     x_offset = Dates.value(t0[1])
     tt = filter_first_of_month(t0)
@@ -284,7 +272,24 @@ function plot_cd_county(cd, county, state, date, pop, n_days_ext=10, n_days_plot
             end
         end
     end
+    xt, x, x_offset
+end
+
+# plot total cases/deaths
+function plot_tcd_county(cd, county, state, date, pop, n_days_ext=10, n_days_plot=250)
+    # normalize by population (per 100,000)
+    c0 = cd[:,1] / pop * 1e5
+    d0 = cd[:,2] / pop * 1e5
+    # get dates for each day
+    n_days = size(cd, 1)
+    t0 = collect(date - Day(n_days - 1):Day(1):date)
+    # cutoff
+    n_days_plot = min(n_days_plot, n_days)
+    t0 = t0[end - (n_days_plot - 1):end]
+    c0 = c0[end - (n_days_plot - 1):end]
+    d0 = d0[end - (n_days_plot - 1):end]
     # plot cases and deaths
+    xt, x, x_offset = dates_int64_xticks(t0)
     p = plot(x, c0, color=:black, xticks=xt, xtickfontsize=8, ylabel="Cases (per 100k)",
              title="$county County, $state - $date\n", titlefontsize=12, legend=false, ylims=(0, 1.1 * maximum(c0)))
     plot!(twinx(), d0, color=:red, grid=:off, xticks=false, legend=false,
@@ -293,14 +298,18 @@ function plot_cd_county(cd, county, state, date, pop, n_days_ext=10, n_days_plot
     p
 end
 
-# plot new cases over time
-function plot_nc_county(cd, county, state, date, pop, n_days_ext=10, n_days_plot=250)
-    # normalize by population (cases per 100,000)
+# plot daily cases/deaths per day
+function plot_dcd_county(cd, county, state, date, pop, n_days_ext=10, n_days_plot=250)
+    # normalize by population (per 100,000)
     c0 = cd[:,1] / pop * 1e5
+    d0 = cd[:,2] / pop * 1e5
     # fit sigmoid derivative to new cases
     c0s = smooth_iir_1(c0)
+    d0s = smooth_iir_1(d0, 0.1)
     dc0 = diff(c0s)
+    dd0 = diff(d0s)
     dc1, dc1_max = fit_sigmoid_deriv_sum(dc0, n_days_ext)
+    dd1, dd1_max = fit_sigmoid_deriv_sum(dd0, n_days_ext)
     # get dates for each day
     n_days = size(cd, 1) - 1
     t0 = collect(date - Day(n_days - 1):Day(1):date)
@@ -310,12 +319,23 @@ function plot_nc_county(cd, county, state, date, pop, n_days_ext=10, n_days_plot
     t0 = t0[end - (n_days_plot - 1):end - 3]
     t1 = t1[end - (n_days_plot + n_days_ext - 1):end]
     dc0 = dc0[end - (n_days_plot - 1):end - 3]
+    dd0 = dd0[end - (n_days_plot - 1):end - 3]
     dc1 = dc1[end - (n_days_plot + n_days_ext - 1):end]
+    dd1 = dd1[end - (n_days_plot + n_days_ext - 1):end]
     # plot cases
-    xt = filter_first_of_month(t1)
-    p = plot(t0, dc0, color=:gray, legend=false);
-    plot!(t1, dc1, xticks=xt, color=:black, xtickfontsize=8, ylabel="New Cases (per 100k)", legend=false)
-    plot!(xformatter=x -> Dates.monthabbr(Date(Dates.UTD(x))))
+    c_ymax = 1.1 * maximum(dc0)
+    d_ymax = 2.0 * maximum(dd0)
+    xt, x, x_offset = dates_int64_xticks(t0)
+    p = plot(x, dc0, color=:grey, xticks=false, ylabel="Daily Cases (per 100k)",
+             title="$county County, $state - $date\n", titlefontsize=12, legend=false, ylims=(0, c_ymax))
+    tx = twinx()
+    plot!(tx, dd0, color=:orange, grid=:off, xticks=false, legend=false,
+          ylabel="Daily Deaths (per 100k)", yguidefont=font(12, :red), ylims=(0, d_ymax))
+
+    xt, x, x_offset = dates_int64_xticks(t1)
+    plot!(x, dc1, color=:black, xticks=xt, xtickfontsize=8, legend=false, ylims=(0, c_ymax))
+    plot!(tx, dd1, color=:red, grid=:off, xticks=false, legend=false, ylims=(0, d_ymax))
+    plot!(xformatter=x -> Dates.monthabbr(Date(Dates.UTD(x + x_offset))))
     p
 end
 
@@ -328,8 +348,8 @@ function plot_county_list(df, county_list)
         county, state = county_list[i]
         cd = load_cd_county(df, county, state)
         pop = load_pop_county(county, state)
-        p[i,1] = plot_cd_county(cd, county, state, date, pop)
-        p[i,2] = plot_nc_county(cd, county, state, date, pop)
+        p[i,1] = plot_tcd_county(cd, county, state, date, pop)
+        p[i,2] = plot_dcd_county(cd, county, state, date, pop)
     end
     plot(p..., layout=(2, n), size=(1400, 600), margin=10mm, right_margin=20mm)
 end
@@ -342,14 +362,9 @@ t = @elapsed df = CSV.read("covid-19-data/us-counties.csv", DataFrame)
 
 # plot data
 display(plot_county_list(df, [("Winnebago", "Illinois"),
-                              ("Cook", "Illinois"),
-                              ("DuPage", "Illinois")]))
+                              ("Boone", "Illinois"),
+                              ("DeKalb", "Illinois")]))
 
 display(plot_county_list(df, [("Santa Clara", "California"),
                               ("Los Angeles", "California"),
                               ("Broward", "Florida")]))
-
-display(plot_county_list(df, [("San Diego", "California"),
-                              ("Los Angeles", "California"),
-                              ("Santa Clara", "California")]))
-png("figures/example.png")

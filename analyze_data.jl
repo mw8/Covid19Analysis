@@ -215,14 +215,14 @@ function fit_sigmoid_deriv_sum(y0, n_ext, discount_last_5::Bool=true)
     end
     opt_a1 = []
     opt_b1 = Inf
-    for n_sig = 1:6
+    for n_sig = 1:8
         a0 = ones(4, n_sig)
-        a0[1,:] .= 0.5
+        a0[1,:] .= 0.3
         for i_sig = 1:n_sig
-            a0[2,i_sig] = (i_sig + 1.0) / (n_sig + 1.0)
+            a0[2,i_sig] = i_sig / (n_sig + 1.0)
         end
         a1, err = fit_sigmoid_deriv_sum_wls_gn(a0[:], t0, w0, y0, 200)
-        b1 = 0.2 * n_sig + log(err) # bayesian information criterion
+        b1 = 0.25 * n_sig + log(err) # bayesian information criterion
         if b1 < opt_b1
             opt_b1 = b1
             opt_a1 = a1
@@ -276,7 +276,7 @@ function dates_int64_xticks(t0)
 end
 
 # plot total cases/deaths
-function plot_tcd_county(cd, county, state, date, pop, n_days_ext=10, n_days_plot=250)
+function plot_tcd_county(cd, county, state, date, pop, set_ymax, n_days_ext=10, n_days_plot=300)
     # normalize by population (per 100,000)
     c0 = cd[:,1] / pop * 1e5
     d0 = cd[:,2] / pop * 1e5
@@ -289,17 +289,24 @@ function plot_tcd_county(cd, county, state, date, pop, n_days_ext=10, n_days_plo
     c0 = c0[end - (n_days_plot - 1):end]
     d0 = d0[end - (n_days_plot - 1):end]
     # plot cases and deaths
+    if set_ymax
+        c_ymax = 3200.0
+        d_ymax = 150.0
+    else
+        c_ymax = 1.05 * maximum(c0)
+        d_ymax = 2.05 * maximum(d0)
+    end
     xt, x, x_offset = dates_int64_xticks(t0)
-    p = plot(x, c0, color=:black, xticks=xt, xtickfontsize=8, ylabel="Cases (per 100k)",
-             title="$county County, $state - $date\n", titlefontsize=12, legend=false, ylims=(0, 1.1 * maximum(c0)))
+    p = plot(x, c0, color=:black, xticks=xt, xtickfontsize=8, ylabel="Cases (per 100k)", yguidefont=font(8),
+             title="$county County, $state\n", titlefontsize=10, legend=false, ylims=(0, c_ymax))
     plot!(twinx(), d0, color=:red, grid=:off, xticks=false, legend=false,
-          ylabel="Deaths (per 100k)", yguidefont=font(12, :red), ylims=(0, 2 * maximum(d0)))
+          ylabel="Deaths (per 100k)", yguidefont=font(8, :red), ylims=(0, d_ymax))
     plot!(xformatter=x -> Dates.monthabbr(Date(Dates.UTD(x + x_offset))))
     p
 end
 
 # plot daily cases/deaths per day
-function plot_dcd_county(cd, county, state, date, pop, n_days_ext=10, n_days_plot=250)
+function plot_dcd_county(cd, county, state, date, pop, set_ymax, n_days_ext=10, n_days_plot=300)
     # normalize by population (per 100,000)
     c0 = cd[:,1] / pop * 1e5
     d0 = cd[:,2] / pop * 1e5
@@ -308,8 +315,8 @@ function plot_dcd_county(cd, county, state, date, pop, n_days_ext=10, n_days_plo
     d0s = smooth_iir_1(d0, 0.1)
     dc0 = diff(c0s)
     dd0 = diff(d0s)
-    dc1, dc1_max = fit_sigmoid_deriv_sum(dc0, n_days_ext)
-    dd1, dd1_max = fit_sigmoid_deriv_sum(dd0, n_days_ext)
+    dc1, dc1_max = fit_sigmoid_deriv_sum(dc0, n_days_ext, true)
+    dd1, dd1_max = fit_sigmoid_deriv_sum(dd0, n_days_ext, false)
     # get dates for each day
     n_days = size(cd, 1) - 1
     t0 = collect(date - Day(n_days - 1):Day(1):date)
@@ -323,15 +330,19 @@ function plot_dcd_county(cd, county, state, date, pop, n_days_ext=10, n_days_plo
     dc1 = dc1[end - (n_days_plot + n_days_ext - 1):end]
     dd1 = dd1[end - (n_days_plot + n_days_ext - 1):end]
     # plot cases
-    c_ymax = 1.1 * maximum(dc0)
-    d_ymax = 2.0 * maximum(dd0)
+    if set_ymax
+        c_ymax = 40.0
+        d_ymax = 1.0
+    else
+        c_ymax = 1.05 * maximum(dc0)
+        d_ymax = 2.05 * maximum(dd0)
+    end
     xt, x, x_offset = dates_int64_xticks(t0)
-    p = plot(x, dc0, color=:grey, xticks=false, ylabel="Daily Cases (per 100k)",
-             title="$county County, $state - $date\n", titlefontsize=12, legend=false, ylims=(0, c_ymax))
+    p = plot(x, dc0, color=:grey, xticks=false, ylabel="Daily Cases (per 100k)", yguidefont=font(8),
+             title="$county County, $state\n", titlefontsize=10, legend=false, ylims=(0, c_ymax))
     tx = twinx()
     plot!(tx, dd0, color=:orange, grid=:off, xticks=false, legend=false,
-          ylabel="Daily Deaths (per 100k)", yguidefont=font(12, :red), ylims=(0, d_ymax))
-
+          ylabel="Daily Deaths (per 100k)", yguidefont=font(8, :red), ylims=(0, d_ymax))
     xt, x, x_offset = dates_int64_xticks(t1)
     plot!(x, dc1, color=:black, xticks=xt, xtickfontsize=8, legend=false, ylims=(0, c_ymax))
     plot!(tx, dd1, color=:red, grid=:off, xticks=false, legend=false, ylims=(0, d_ymax))
@@ -340,18 +351,18 @@ function plot_dcd_county(cd, county, state, date, pop, n_days_ext=10, n_days_plo
 end
 
 # plot cases/deaths over time and new cases versus total cases
-function plot_county_list(df, county_list)
+function plot_county_list(df, county_list, set_ymax=false)
     n = length(county_list)
     date = df[end,:date]
-    p = Array{Any,2}(undef, n, 2)
+    p = Array{Any,2}(undef, 2, n)
     for i = 1:n
         county, state = county_list[i]
         cd = load_cd_county(df, county, state)
         pop = load_pop_county(county, state)
-        p[i,1] = plot_tcd_county(cd, county, state, date, pop)
-        p[i,2] = plot_dcd_county(cd, county, state, date, pop)
+        p[1,i] = plot_tcd_county(cd, county, state, date, pop, set_ymax)
+        p[2,i] = plot_dcd_county(cd, county, state, date, pop, set_ymax)
     end
-    plot(p..., layout=(2, n), size=(1400, 600), margin=10mm, right_margin=20mm)
+    plot(p..., layout=(n, 2), size=(800, 250 * n), margin=5mm, right_margin=15mm)
 end
 
 
@@ -364,6 +375,11 @@ t = @elapsed df = CSV.read("covid-19-data/us-counties.csv", DataFrame)
 display(plot_county_list(df, [("Winnebago", "Illinois"),
                               ("Boone", "Illinois"),
                               ("DeKalb", "Illinois")]))
+
+display(plot_county_list(df, [("Alameda", "California"),
+                              ("Santa Clara", "California"),
+                              ("Los Angeles", "California"),
+                              ("San Diego", "California")], true))
 
 display(plot_county_list(df, [("Santa Clara", "California"),
                               ("Los Angeles", "California"),

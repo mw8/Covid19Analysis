@@ -9,7 +9,9 @@ Scripts to plot and analyze covid-19 case data by county.
 * Install [Julia](https://julialang.org). You may need to consult the [instructions here](https://julialang.org/downloads/platform/).
 * It is highly recommended to run the following command to automatically update git submodules.
 > git config --global submodule.recurse true
-* After the submodule (containing the data) is updated, just run
+* Initialize the submodule that contains all of the data.
+> git submodule update --init --recursive
+* After the submodule is updated, just run
 > julia analyze_data.py
 
 ## Example output

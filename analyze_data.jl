@@ -124,10 +124,6 @@ function fit_sigmoid_deriv_sum_wls_gn(x_init, t, w, y0_raw, iter_max, debug::Boo
     eps_inc = 3.0
     eps_dec = 0.5
 
-    # regularization coefficients
-    c_reg = zeros(n)
-    c_reg[1:4:end] .= 1e-4
-
     # set up initial values
     eps = 1.0
     eps_it = 0
@@ -137,12 +133,17 @@ function fit_sigmoid_deriv_sum_wls_gn(x_init, t, w, y0_raw, iter_max, debug::Boo
     err1 = norm(res)
     err_opt = err1
 
+    # regularization coefficients
+    x_init[1:4:end] .= 0.0
+    c_reg = 1e-3 * zeros(n)
+    c_reg[3:4:end] .= 0.0
+
     # Gauss-Newton iterations
     for it = 1:iter_max
         
         # update parameters
         x0 = copy(x1)
-        x1 -= (jac' * jac + eps * I) \ (jac' * res) * 0.5 - (c_reg .* x1)
+        x1 -= (jac' * jac + eps * I) \ (jac' * res) * 0.5 - c_reg .* (x1 - x_init)
         x1[1:4:end] = max.(min.(x1[1:4:end], 100.0), 0.01)
         x1[2:4:end] = max.(min.(x1[2:4:end],  10.0),  0.1)
         x1[3:4:end] = max.(min.(x1[3:4:end],   1.1), -0.1)
@@ -221,8 +222,8 @@ function fit_sigmoid_deriv_sum(y0, n_ext, discount_last_5::Bool=true)
         for i_sig = 1:n_sig
             a0[2,i_sig] = i_sig / (n_sig + 1.0)
         end
-        a1, err = fit_sigmoid_deriv_sum_wls_gn(a0[:], t0, w0, y0, 200)
-        b1 = 0.25 * n_sig + log(err) # bayesian information criterion
+        a1, err = fit_sigmoid_deriv_sum_wls_gn(a0[:], t0, w0, y0, 300)
+        b1 = 0.2 * n_sig + log(err) # bayesian information criterion
         if b1 < opt_b1
             opt_b1 = b1
             opt_a1 = a1
@@ -276,7 +277,7 @@ function dates_int64_xticks(t0)
 end
 
 # plot total cases/deaths
-function plot_tcd_county(cd, county, state, date, pop, set_ymax, n_days_ext=10, n_days_plot=300)
+function plot_tcd_county(cd, county, state, date, pop, set_ymax, n_days_ext=10, n_days_plot=100)
     # normalize by population (per 100,000)
     c0 = cd[:,1] / pop * 1e5
     d0 = cd[:,2] / pop * 1e5
@@ -297,16 +298,16 @@ function plot_tcd_county(cd, county, state, date, pop, set_ymax, n_days_ext=10, 
         d_ymax = 2.05 * maximum(d0)
     end
     xt, x, x_offset = dates_int64_xticks(t0)
-    p = plot(x, c0, color=:black, xticks=xt, xtickfontsize=8, ylabel="Cases (per 100k)", yguidefont=font(8),
+    p = plot(x, c0, color=:black, xticks=xt, xtickfontsize=8, ylabel="Total Cases (per 100k)", yguidefont=font(8),
              title="$county County, $state\n", titlefontsize=10, legend=false, ylims=(0, c_ymax))
     plot!(twinx(), d0, color=:red, grid=:off, xticks=false, legend=false,
-          ylabel="Deaths (per 100k)", yguidefont=font(8, :red), ylims=(0, d_ymax))
+          ylabel="Total Deaths (per 100k)", yguidefont=font(8, :red), ylims=(0, d_ymax))
     plot!(xformatter=x -> Dates.monthabbr(Date(Dates.UTD(x + x_offset))))
     p
 end
 
 # plot daily cases/deaths per day
-function plot_dcd_county(cd, county, state, date, pop, set_ymax, n_days_ext=10, n_days_plot=300)
+function plot_dcd_county(cd, county, state, date, pop, set_ymax, n_days_ext=10, n_days_plot=100)
     # normalize by population (per 100,000)
     c0 = cd[:,1] / pop * 1e5
     d0 = cd[:,2] / pop * 1e5
@@ -334,18 +335,18 @@ function plot_dcd_county(cd, county, state, date, pop, set_ymax, n_days_ext=10, 
         c_ymax = 40.0
         d_ymax = 1.0
     else
-        c_ymax = 1.05 * maximum(dc0)
-        d_ymax = 2.05 * maximum(dd0)
+        c_ymax = max(1.05 * maximum(dc0), 40.0)
+        d_ymax = max(2.05 * maximum(dd0), 1.0)
     end
     xt, x, x_offset = dates_int64_xticks(t0)
-    p = plot(x, dc0, color=:grey, xticks=false, ylabel="Daily Cases (per 100k)", yguidefont=font(8),
+    p = plot(x, dc0, color=:black, xticks=false, ylabel="Daily Cases (per 100k)", yguidefont=font(8),
              title="$county County, $state\n", titlefontsize=10, legend=false, ylims=(0, c_ymax))
     tx = twinx()
-    plot!(tx, dd0, color=:orange, grid=:off, xticks=false, legend=false,
+    plot!(tx, dd0, color=:red, grid=:off, xticks=false, legend=false,
           ylabel="Daily Deaths (per 100k)", yguidefont=font(8, :red), ylims=(0, d_ymax))
     xt, x, x_offset = dates_int64_xticks(t1)
-    plot!(x, dc1, color=:black, xticks=xt, xtickfontsize=8, legend=false, ylims=(0, c_ymax))
-    plot!(tx, dd1, color=:red, grid=:off, xticks=false, legend=false, ylims=(0, d_ymax))
+    plot!(x, dc1, color=:grey, xticks=xt, xtickfontsize=8, legend=false, ylims=(0, c_ymax))
+    plot!(tx, dd1, color=:orange, grid=:off, xticks=false, legend=false, ylims=(0, d_ymax))
     plot!(xformatter=x -> Dates.monthabbr(Date(Dates.UTD(x + x_offset))))
     p
 end
@@ -384,3 +385,4 @@ display(plot_county_list(df, [("Alameda", "California"),
 display(plot_county_list(df, [("Santa Clara", "California"),
                               ("Los Angeles", "California"),
                               ("Broward", "Florida")]))
+png("figures/example_2.png")
